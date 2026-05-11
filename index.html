@@ -278,7 +278,7 @@ function showDetail(id) {
     if (src) {
       body.appendChild(el('div', 'section-label', entry[nameKey]));
       const aud = document.createElement('audio');
-      aud.src = src; aud.controls = true;
+      aud.src = src; aud.crossOrigin = "anonymous"; aud.controls = true;
       body.appendChild(aud);
     }
   });
