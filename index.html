@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Audiogeografie Salzburg – Benjamin Lageder</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0e0e0d;
+    --surface: #161614;
+    --surface2: #1f1f1c;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+    --accent: #9fd3b0;
+    --accent-dim: #4a8c65;
+    --text: #e8e2d8;
+    --text-muted: #7a7570;
+    --text-faint: #3f3d39;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --mono: 'DM Mono', 'Courier New', monospace;
+    --radius: 4px;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; overflow: hidden; }
+  #app { display: flex; height: 100vh; }
+
+  #map { flex: 1; z-index: 1; }
+  .leaflet-container { background: #1a1710 !important; }
+  .leaflet-control-attribution { background: rgba(14,14,13,0.7) !important; color: var(--text-faint) !important; font-size: 9px !important; }
+  .leaflet-control-attribution a { color: var(--text-faint) !important; }
+
+  #sidebar { width: 320px; background: var(--surface); border-left: 0.5px solid var(--border); display: flex; flex-direction: column; overflow: hidden; z-index: 10; }
+
+  #sidebar-top { padding: 20px 20px 16px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+  .project-label { font-size: 10px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+  #sidebar-top h1 { font-family: var(--serif); font-size: 20px; font-weight: 400; line-height: 1.2; color: var(--text); font-style: italic; }
+  .subtitle { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+  .count-line { margin-top: 12px; font-size: 11px; color: var(--accent-dim); display: flex; align-items: center; gap: 6px; }
+  .count-line::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  #loading { padding: 32px 20px; text-align: center; color: var(--text-faint); font-size: 12px; line-height: 1.8; }
+  .spinner { width: 20px; height: 20px; border: 1.5px solid var(--text-faint); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #error-box { display: none; margin: 16px; background: rgba(192,96,96,0.1); border: 0.5px solid rgba(192,96,96,0.3); border-radius: var(--radius); padding: 12px 14px; font-size: 11px; color: #c06060; line-height: 1.6; }
+
+  #entry-list-view { flex: 1; overflow-y: auto; }
+  #entry-list-view::-webkit-scrollbar { width: 3px; }
+  #entry-list-view::-webkit-scrollbar-thumb { background: var(--text-faint); border-radius: 2px; }
+
+  .no-entries { padding: 32px 20px; color: var(--text-faint); font-size: 12px; line-height: 1.7; text-align: center; }
+
+  .entry-item { padding: 14px 20px; border-bottom: 0.5px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  .entry-item:hover, .entry-item.active { background: var(--surface2); }
+  .ei-title { font-family: var(--serif); font-size: 15px; font-weight: 400; color: var(--text); margin-bottom: 4px; font-style: italic; }
+  .ei-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .badge { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px; padding: 1px 6px; font-size: 10px; color: var(--text-muted); }
+
+  #detail-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  #detail-panel.open { display: flex; }
+  #detail-head { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; align-items: flex-start; gap: 10px; flex-shrink: 0; }
+  #btn-back { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 18px; padding: 0; margin-top: 1px; flex-shrink: 0; font-family: var(--mono); transition: color 0.15s; }
+  #btn-back:hover { color: var(--text); }
+  #detail-title { font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--text); line-height: 1.3; flex: 1; }
+
+  #detail-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  #detail-body::-webkit-scrollbar { width: 3px; }
+  #detail-body::-webkit-scrollbar-thumb { background: var(--text-faint); }
+
+  .detail-photo { width: 100%; border-radius: var(--radius); max-height: 200px; object-fit: cover; border: 0.5px solid var(--border); }
+  .section-label { font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+  audio { width: 100%; height: 28px; border-radius: var(--radius); filter: invert(1) hue-rotate(180deg) brightness(0.7); }
+  .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+  .coords-text { font-size: 10px; color: var(--text-faint); }
+
+  #sidebar-footer { padding: 10px 20px; border-top: 0.5px solid var(--border); font-size: 10px; color: var(--text-faint); flex-shrink: 0; text-align: center; letter-spacing: 0.05em; line-height: 2; }
+  #sidebar-footer a { color: var(--text-faint); text-decoration: none; }
+  #sidebar-footer a:hover { color: var(--text-muted); }
+  #btn-refresh { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text-muted); font-size: 11px; font-family: var(--mono); padding: 4px 10px; transition: all 0.15s; }
+  #btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="sidebar">
+    <div id="sidebar-top">
+      <div class="project-label">Benjamin Lageder · 2025/26</div>
+      <h1>Audiogeografie<br/>Salzburg</h1>
+      <div class="subtitle">Klangliche Kartografien zwischen<br/>Erinnerung und Erfindung</div>
+      <div class="count-line" id="count-line">wird geladen…</div>
+    </div>
+
+    <div id="error-box"></div>
+
+    <div id="entry-list-view">
+      <div id="loading">
+        <div class="spinner"></div>
+        Aufnahmen werden geladen…
+      </div>
+      <div id="entry-list" style="display:none;"></div>
+      <div class="no-entries" id="no-entries" style="display:none;">Noch keine Einträge vorhanden.</div>
+    </div>
+
+    <div id="detail-panel">
+      <div id="detail-head">
+        <button id="btn-back" title="Zurück">←</button>
+        <div id="detail-title"></div>
+      </div>
+      <div id="detail-body"></div>
+    </div>
+
+    <div id="sidebar-footer">
+      <a href="https://benjaminlageder.com" target="_blank">benjaminlageder.com</a><br/>
+      <button id="btn-refresh">↻ Neu laden</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.js"></script>
+<script>
+// ════════════════════════════════════════════════
+//  KONFIGURATION – nur hier etwas ändern
+// ════════════════════════════════════════════════
+const SHEET_ID   = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
+const SHEET_NAME = 'Tabelle1';   // oder 'Sheet1' bei englischem Google
+// ════════════════════════════════════════════════
+
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+const map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
+L.control.zoom({ position: 'bottomleft' }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+let entries = [], activeId = null;
+const markers = {};
+
+function makeIcon(active) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:24px;height:34px;">
+      <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:${active?'#fff':'#9fd3b0'};border:2px solid #0e0e0d;"></div>
+      <div style="position:absolute;top:13px;left:50%;transform:translateX(-50%);width:2px;height:14px;background:#4a8c65;"></div>
+    </div>`,
+    iconSize: [24,34], iconAnchor: [12,34]
+  });
+}
+
+function driveDirectLink(url) {
+  if (!url) return null;
+  url = url.trim();
+  if (!url) return null;
+  const m = url.match(/\/d\/([^\/\?&]+)/);
+  return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : url;
+}
+
+function driveViewLink(url) {
+  if (!url) return null;
+  url = url.trim();
+  if (!url) return null;
+  const m = url.match(/\/d\/([^\/\?&]+)/);
+  return m ? `https://drive.google.com/uc?export=view&id=${m[1]}` : url;
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('entry-list').style.display = 'none';
+  document.getElementById('no-entries').style.display = 'none';
+  document.getElementById('error-box').style.display = 'none';
+  document.getElementById('count-line').textContent = 'wird geladen…';
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  for (const k in markers) delete markers[k];
+  entries = [];
+
+  try {
+    const res = await fetch(SHEET_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
+    const cols  = json.table.cols.map(c => c.label.toLowerCase().trim());
+    const rows  = json.table.rows;
+
+    const get = (row, key) => {
+      const alts = { lat: ['lat','latitude','breitengrad'], lng: ['lng','lon','longitude','längengrad'],
+        titel: ['titel','title','name'], datum: ['datum','date'], audio1: ['audio1','audio 1'],
+        audio1name: ['audio1name','audio 1 name','audio1 name'], audio2: ['audio2','audio 2'],
+        audio2name: ['audio2name','audio 2 name','audio2 name'], foto: ['foto','photo','bild','image'],
+        notizen: ['notizen','notes','text','beschreibung'] };
+      const keys = alts[key] || [key];
+      for (const k of keys) {
+        const idx = cols.indexOf(k);
+        if (idx >= 0 && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
+      }
+      return '';
+    };
+
+    entries = rows.map((row, i) => ({
+      id: i,
+      title:      get(row,'titel') || 'Ort ' + (i+1),
+      lat:        parseFloat(get(row,'lat')),
+      lng:        parseFloat(get(row,'lng')),
+      datum:      get(row,'datum'),
+      audio1url:  get(row,'audio1'),
+      audio1name: get(row,'audio1name') || 'Field Recording',
+      audio2url:  get(row,'audio2'),
+      audio2name: get(row,'audio2name') || 'Bearbeitete Version',
+      photourl:   get(row,'foto'),
+      notes:      get(row,'notizen'),
+    })).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
+
+    document.getElementById('loading').style.display = 'none';
+    entries.forEach(e => {
+      const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
+        .addTo(map).on('click', () => showDetail(e.id));
+      markers[e.id] = m;
+    });
+    renderList();
+
+  } catch(err) {
+    document.getElementById('loading').style.display = 'none';
+    const eb = document.getElementById('error-box');
+    eb.style.display = 'block';
+    eb.textContent = 'Fehler: ' + err.message + ' – Bitte Sheet-ID prüfen und sicherstellen, dass das Sheet öffentlich geteilt ist.';
+    document.getElementById('count-line').textContent = 'Fehler beim Laden';
+  }
+}
+
+function renderList() {
+  const list = document.getElementById('entry-list');
+  const none = document.getElementById('no-entries');
+  list.innerHTML = '';
+  document.getElementById('count-line').textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
+  if (!entries.length) { none.style.display = 'block'; list.style.display = 'none'; return; }
+  none.style.display = 'none'; list.style.display = 'block';
+  entries.forEach(entry => {
+    const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'⬛ Foto':''].filter(Boolean);
+    const div = document.createElement('div');
+    div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
+    div.innerHTML = `<div class="ei-title">${entry.title}</div>
+      <div class="ei-meta">${entry.datum?`<span>${entry.datum}</span>`:''}${badges.map(b=>`<span class="badge">${b}</span>`).join('')}</div>`;
+    div.addEventListener('click', () => showDetail(entry.id));
+    list.appendChild(div);
+  });
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function showDetail(id) {
+  activeId = id;
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  Object.entries(markers).forEach(([eid, m]) => m.setIcon(makeIcon(String(eid) === String(id))));
+  map.panTo([entry.lat, entry.lng]);
+  document.getElementById('detail-title').textContent = entry.title;
+  const body = document.getElementById('detail-body');
+  body.innerHTML = '';
+
+  const photoSrc = driveViewLink(entry.photourl);
+  if (photoSrc) {
+    const img = document.createElement('img');
+    img.className = 'detail-photo'; img.src = photoSrc; img.alt = entry.title;
+    img.onerror = () => img.remove();
+    body.appendChild(img);
+  }
+
+  [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
+    const src = driveDirectLink(entry[urlKey]);
+    if (src) {
+      body.appendChild(el('div', 'section-label', entry[nameKey]));
+      const aud = document.createElement('audio');
+      aud.src = src; aud.controls = true;
+      body.appendChild(aud);
+    }
+  });
+
+  if (entry.notes) {
+    body.appendChild(el('div', 'section-label', 'Notizen'));
+    body.appendChild(el('div', 'notes-text', entry.notes));
+  }
+
+  body.appendChild(el('div', 'coords-text', [entry.datum, `${entry.lat.toFixed(5)}, ${entry.lng.toFixed(5)}`].filter(Boolean).join(' · ')));
+
+  document.getElementById('entry-list-view').style.display = 'none';
+  document.getElementById('detail-panel').classList.add('open');
+  renderList();
+}
+
+document.getElementById('btn-back').addEventListener('click', () => {
+  activeId = null;
+  Object.values(markers).forEach(m => m.setIcon(makeIcon(false)));
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('entry-list-view').style.display = 'block';
+  renderList();
+});
+
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  activeId = null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('entry-list-view').style.display = 'block';
+  loadData();
+});
+
+loadData();
+</script>
+</body>
+</html>
