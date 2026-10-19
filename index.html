@@ -209,10 +209,11 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-let map, entries = [], activeId = null;
+let map = null, entries = [], activeId = null;
 const markers = {};
 
-function initApp() {
+// Sofortiger Start beim Laden des Dokuments
+document.addEventListener('DOMContentLoaded', () => {
   try {
     map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -223,13 +224,35 @@ function initApp() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    setTimeout(() => { map.invalidateSize(); }, 250);
+    setTimeout(() => { if(map) map.invalidateSize(); }, 250);
   } catch(e) {
-    console.error("Map init error:", e);
+    console.error("Map initialization failed:", e);
+  }
+
+  // Event Listener sicher zuweisen
+  const btnBack = document.getElementById('btn-back');
+  if(btnBack) {
+    btnBack.addEventListener('click', () => {
+      activeId = null;
+      Object.values(markers).forEach(m => { if(m) m.setIcon(makeIcon(false)); });
+      document.getElementById('detail-panel').classList.remove('open');
+      document.getElementById('entry-list-view').style.display = 'block';
+      renderList();
+    });
+  }
+
+  const btnRefresh = document.getElementById('btn-refresh');
+  if(btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      activeId = null;
+      document.getElementById('detail-panel').classList.remove('open');
+      document.getElementById('entry-list-view').style.display = 'block';
+      loadData();
+    });
   }
 
   loadData();
-}
+});
 
 window.toggleSidebar = function() {
   document.getElementById('sidebar').classList.toggle('open');
@@ -259,7 +282,7 @@ function makeIcon(active) {
 
 function driveDirectLink(url) {
   if (!url) return null;
-  url = url.trim();
+  url = String(url).trim();
   if (!url) return null;
   const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
   return m ? 'https://drive.google.com/uc?export=download&id=' + m[1] : url;
@@ -267,7 +290,7 @@ function driveDirectLink(url) {
 
 function driveViewLink(url) {
   if (!url) return null;
-  url = url.trim();
+  url = String(url).trim();
   if (!url) return null;
   const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
   return m ? 'https://drive.google.com/uc?export=view&id=' + m[1] : url;
@@ -278,13 +301,19 @@ async function loadData() {
   const SHEET_NAME = 'Tabelle1';
   const SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME);
 
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('entry-list').style.display = 'none';
-  document.getElementById('no-entries').style.display = 'none';
-  document.getElementById('error-box').style.display = 'none';
-  document.getElementById('count-line').textContent = 'wird geladen…';
+  const loadingEl = document.getElementById('loading');
+  const listEl = document.getElementById('entry-list');
+  const noneEl = document.getElementById('no-entries');
+  const errorEl = document.getElementById('error-box');
+  const countEl = document.getElementById('count-line');
 
-  Object.values(markers).forEach(m => { if(map) map.removeLayer(m); });
+  if(loadingEl) loadingEl.style.display = 'block';
+  if(listEl) listEl.style.display = 'none';
+  if(noneEl) noneEl.style.display = 'none';
+  if(errorEl) errorEl.style.display = 'none';
+  if(countEl) countEl.textContent = 'wird geladen…';
+
+  Object.values(markers).forEach(m => { if(map && m) map.removeLayer(m); });
   for (const k in markers) delete markers[k];
   entries = [];
 
@@ -340,7 +369,7 @@ async function loadData() {
       };
     }).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
 
-    document.getElementById('loading').style.display = 'none';
+    if(loadingEl) loadingEl.style.display = 'none';
     
     if (map) {
       entries.forEach(e => {
@@ -353,28 +382,32 @@ async function loadData() {
 
   } catch(err) {
     console.error(err);
-    document.getElementById('loading').style.display = 'none';
-    const eb = document.getElementById('error-box');
-    eb.style.display = 'block';
-    eb.textContent = 'Hinweis: ' + err.message;
-    document.getElementById('count-line').textContent = '0 Aufnahmen';
-    document.getElementById('no-entries').style.display = 'block';
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(errorEl) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'Hinweis: ' + err.message;
+    }
+    if(countEl) countEl.textContent = '0 Aufnahmen';
+    if(noneEl) noneEl.style.display = 'block';
   }
 }
 
 function renderList() {
   const list = document.getElementById('entry-list');
   const none = document.getElementById('no-entries');
+  const countEl = document.getElementById('count-line');
+  
+  if(!list) return;
   list.innerHTML = '';
-  document.getElementById('count-line').textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
+  if(countEl) countEl.textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
   
   if (!entries.length) { 
-    none.style.display = 'block'; 
+    if(none) none.style.display = 'block'; 
     list.style.display = 'none'; 
     return; 
   }
   
-  none.style.display = 'none'; 
+  if(none) none.style.display = 'none'; 
   list.style.display = 'block';
 
   entries.forEach(entry => {
@@ -437,27 +470,6 @@ function showDetail(id) {
   document.getElementById('entry-list-view').style.display = 'none';
   document.getElementById('detail-panel').classList.add('open');
   renderList();
-}
-
-document.getElementById('btn-back').addEventListener('click', () => {
-  activeId = null;
-  Object.values(markers).forEach(m => { if(m) m.setIcon(makeIcon(false)); });
-  document.getElementById('detail-panel').classList.remove('open');
-  document.getElementById('entry-list-view').style.display = 'block';
-  renderList();
-});
-
-document.getElementById('btn-refresh').addEventListener('click', () => {
-  activeId = null;
-  document.getElementById('detail-panel').classList.remove('open');
-  document.getElementById('entry-list-view').style.display = 'block';
-  loadData();
-});
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
 }
 </script>
 </body>
