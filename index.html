@@ -28,7 +28,7 @@
 
   #app { display: flex; height: 100vh; width: 100vw; position: relative; }
 
-  /* MAP (CARTO POSITRON CLEAN LAYOUT) */
+  /* MAP (CLEAN LIGHT GRAY LAYOUT) */
   #map { flex: 1; height: 100%; width: 100%; z-index: 1; }
   .leaflet-container { background: #f2efe9 !important; }
   .leaflet-control-attribution { background: rgba(245,244,241,0.85) !important; color: var(--text-faint) !important; font-size: 9px !important; }
@@ -218,10 +218,10 @@ function initMap() {
   const map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  // ESRI Gray Canvas – Freie, schlichte, hellgraue Minimalist-Karte ohne Key
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
   }).addTo(map);
 
   setTimeout(function() { map.invalidateSize(); }, 300);
@@ -276,166 +276,4 @@ function initMap() {
     document.getElementById('error-box').style.display = 'none';
     document.getElementById('count-line').textContent = 'wird geladen…';
     Object.values(markers).forEach(function(m) { map.removeLayer(m); });
-    for (const k in markers) delete markers[k];
-    entries = [];
-
-    try {
-      const res = await fetch(SHEET_URL);
-      if (!res.ok) throw new Error('Google Sheet nicht erreichbar');
-      const text = await res.text();
-      const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
-      
-      if (!json.table || !json.table.cols || !json.table.rows) {
-        throw new Error('Keine gültigen Daten im Google Sheet');
-      }
-
-      const cols = json.table.cols.map(function(c) { return (c && c.label) ? c.label.toLowerCase().trim() : ''; });
-      const rows = json.table.rows;
-
-      const get = function(row, key) {
-        const alts = {
-          lat: ['lat','latitude','breitengrad'],
-          lng: ['lng','lon','longitude','längengrad'],
-          titel: ['titel','title','name'],
-          datum: ['datum','date'],
-          audio1: ['audio1','audio 1'],
-          audio1name: ['audio1name','audio 1 name','audio1 name'],
-          audio2: ['audio2','audio 2'],
-          audio2name: ['audio2name','audio 2 name','audio2 name'],
-          foto: ['foto','photo','bild','image'],
-          notizen: ['notizen','notes','text','beschreibung']
-        };
-        const keys = alts[key] || [key];
-        for (const k of keys) {
-          const idx = cols.indexOf(k);
-          if (idx >= 0 && row.c && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
-        }
-        return '';
-      };
-
-      entries = rows.map(function(row, i) {
-        const latVal = get(row,'lat').replace(',', '.');
-        const lngVal = get(row,'lng').replace(',', '.');
-        return {
-          id: i,
-          title:      get(row,'titel') || 'Ort ' + (i+1),
-          lat:        parseFloat(latVal),
-          lng:        parseFloat(lngVal),
-          datum:      get(row,'datum'),
-          audio1url:  get(row,'audio1'),
-          audio1name: get(row,'audio1name') || 'Field Recording',
-          audio2url:  get(row,'audio2'),
-          audio2name: get(row,'audio2name') || 'Bearbeitete Version',
-          photourl:   get(row,'foto'),
-          notes:      get(row,'notizen'),
-        };
-      }).filter(function(e) { return !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0; });
-
-      document.getElementById('loading').style.display = 'none';
-      entries.forEach(function(e) {
-        const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
-          .addTo(map).on('click', function() { showDetail(e.id); openSidebarOnMobile(); });
-        markers[e.id] = m;
-      });
-      renderList();
-
-    } catch(err) {
-      document.getElementById('loading').style.display = 'none';
-      const eb = document.getElementById('error-box');
-      eb.style.display = 'block';
-      eb.textContent = 'Hinweis: ' + err.message;
-      document.getElementById('count-line').textContent = 'Keine Einträge geladen';
-    }
-  }
-
-  function renderList() {
-    const list = document.getElementById('entry-list');
-    const none = document.getElementById('no-entries');
-    list.innerHTML = '';
-    document.getElementById('count-line').textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
-    if (!entries.length) { none.style.display = 'block'; list.style.display = 'none'; return; }
-    none.style.display = 'none'; list.style.display = 'block';
-    entries.forEach(function(entry) {
-      const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'▪ Foto':''].filter(Boolean);
-      const div = document.createElement('div');
-      div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
-      div.innerHTML = '<div class="ei-title">' + entry.title + '</div>' +
-        '<div class="ei-meta">' + (entry.datum ? '<span>' + entry.datum + '</span>' : '') + badges.map(function(b) { return '<span class="badge">' + b + '</span>'; }).join('') + '</div>';
-      div.addEventListener('click', function() { showDetail(entry.id); });
-      list.appendChild(div);
-    });
-  }
-
-  function el(tag, cls, text) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  }
-
-  function showDetail(id) {
-    activeId = id;
-    const entry = entries.find(function(e) { return e.id === id; });
-    if (!entry) return;
-    Object.entries(markers).forEach(function(pair) { pair[1].setIcon(makeIcon(String(pair[0]) === String(id))); });
-    map.panTo([entry.lat, entry.lng]);
-    document.getElementById('detail-title').textContent = entry.title;
-    const body = document.getElementById('detail-body');
-    body.innerHTML = '';
-
-    const photoSrc = driveViewLink(entry.photourl);
-    if (photoSrc) {
-      const img = document.createElement('img');
-      img.className = 'detail-photo'; img.src = photoSrc; img.alt = entry.title;
-      img.onerror = function() { img.remove(); };
-      body.appendChild(img);
-    }
-
-    [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(function(pair) {
-      const src = driveDirectLink(entry[pair[0]]);
-      if (src) {
-        body.appendChild(el('div', 'section-label', entry[pair[1]]));
-        const aud = document.createElement('audio');
-        aud.src = src; aud.controls = true;
-        body.appendChild(aud);
-      }
-    });
-
-    if (entry.notes) {
-      body.appendChild(el('div', 'section-label', 'Notizen'));
-      body.appendChild(el('div', 'notes-text', entry.notes));
-    }
-
-    body.appendChild(el('div', 'coords-text', [entry.datum, entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)].filter(Boolean).join(' · ')));
-
-    document.getElementById('entry-list-view').style.display = 'none';
-    document.getElementById('detail-panel').classList.add('open');
-    renderList();
-  }
-
-  document.getElementById('btn-back').addEventListener('click', function() {
-    activeId = null;
-    Object.values(markers).forEach(function(m) { m.setIcon(makeIcon(false)); });
-    document.getElementById('detail-panel').classList.remove('open');
-    document.getElementById('entry-list-view').style.display = 'block';
-    renderList();
-  });
-
-  document.getElementById('btn-refresh').addEventListener('click', function() {
-    activeId = null;
-    document.getElementById('detail-panel').classList.remove('open');
-    document.getElementById('entry-list-view').style.display = 'block';
-    loadData();
-  });
-
-  loadData();
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initMap);
-} else {
-  initMap();
-}
-</script>
-</body>
-</html>
+    for (const k in markers) delete markers
