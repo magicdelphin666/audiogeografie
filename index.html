@@ -205,239 +205,31 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-function initMap() {
-  const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
-  const SHEET_NAME = 'Tabelle1';
-  const SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME);
+let map, entries = [], activeId = null;
+const markers = {};
 
-  if (typeof L === 'undefined') {
-    document.getElementById('count-line').textContent = 'Fehler: Karte nicht geladen';
-    return;
+function initApp() {
+  try {
+    map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    setTimeout(() => { map.invalidateSize(); }, 250);
+  } catch(e) {
+    console.error("Map init error:", e);
   }
-
-  const map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
-  L.control.zoom({ position: 'bottomleft' }).addTo(map);
-
-  // Saubere, helle Standard-Karte (CartoDB Positron) ohne API-Key-Zwang
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-  }).addTo(map);
-
-  // Automatischer Resize-Trigger, damit die Karte sofort und fehlerfrei rendert
-  setTimeout(function() { 
-    map.invalidateSize(); 
-  }, 200);
-
-  let entries = [], activeId = null;
-  const markers = {};
-
-  window.toggleSidebar = function() {
-    document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('overlay').classList.toggle('open');
-  };
-  window.closeSidebar = function() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('overlay').classList.remove('open');
-  };
-  function openSidebarOnMobile() {
-    if (window.innerWidth <= 640) {
-      document.getElementById('sidebar').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
-    }
-  }
-
-  function makeIcon(active) {
-    return L.divIcon({
-      className: 'custom-pin' + (active ? ' active' : ''),
-      html: '<div class="pin-dot"></div>',
-      iconSize: [20, 20], 
-      iconAnchor: [10, 10]
-    });
-  }
-
-  function driveDirectLink(url) {
-    if (!url) return null;
-    url = url.trim();
-    if (!url) return null;
-    const m = url.match(/\/d\/([^\/\?&]+)/);
-    return m ? 'https://drive.google.com/uc?export=download&id=' + m[1] : url;
-  }
-
-  function driveViewLink(url) {
-    if (!url) return null;
-    url = url.trim();
-    if (!url) return null;
-    const m = url.match(/\/d\/([^\/\?&]+)/);
-    return m ? 'https://drive.google.com/uc?export=view&id=' + m[1] : url;
-  }
-
-  async function loadData() {
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('entry-list').style.display = 'none';
-    document.getElementById('no-entries').style.display = 'none';
-    document.getElementById('error-box').style.display = 'none';
-    document.getElementById('count-line').textContent = 'wird geladen…';
-    Object.values(markers).forEach(function(m) { map.removeLayer(m); });
-    for (const k in markers) delete markers[k];
-    entries = [];
-
-    try {
-      const res = await fetch(SHEET_URL);
-      if (!res.ok) throw new Error('Google Sheet nicht erreichbar');
-      const text = await res.text();
-      const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
-      
-      if (!json.table || !json.table.cols || !json.table.rows) {
-        throw new Error('Keine gültigen Daten im Google Sheet');
-      }
-
-      const cols = json.table.cols.map(function(c) { return (c && c.label) ? c.label.toLowerCase().trim() : ''; });
-      const rows = json.table.rows;
-
-      const get = function(row, key) {
-        const alts = {
-          lat: ['lat','latitude','breitengrad'],
-          lng: ['lng','lon','longitude','längengrad'],
-          titel: ['titel','title','name'],
-          audio1: ['audio1','audio 1'],
-          audio1name: ['audio1name','audio 1 name','audio1 name'],
-          audio2: ['audio2','audio 2'],
-          audio2name: ['audio2name','audio 2 name','audio2 name'],
-          foto: ['foto','photo','bild','image'],
-          notizen: ['notizen','notes','text','beschreibung']
-        };
-        const keys = alts[key] || [key];
-        for (const k of keys) {
-          const idx = cols.indexOf(k);
-          if (idx >= 0 && row.c && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
-        }
-        return '';
-      };
-
-      entries = rows.map(function(row, i) {
-        const latVal = get(row,'lat').replace(',', '.');
-        const lngVal = get(row,'lng').replace(',', '.');
-        return {
-          id: i,
-          title:      get(row,'titel') || 'Ort ' + (i+1),
-          lat:        parseFloat(latVal),
-          lng:        parseFloat(lngVal),
-          audio1url:  get(row,'audio1'),
-          audio1name: get(row,'audio1name') || 'Field Recording',
-          audio2url:  get(row,'audio2'),
-          audio2name: get(row,'audio2name') || 'Bearbeitete Version',
-          photourl:   get(row,'foto'),
-          notes:      get(row,'notizen'),
-        };
-      }).filter(function(e) { return !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0; });
-
-      document.getElementById('loading').style.display = 'none';
-      entries.forEach(function(e) {
-        const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
-          .addTo(map).on('click', function() { showDetail(e.id); openSidebarOnMobile(); });
-        markers[e.id] = m;
-      });
-      renderList();
-
-    } catch(err) {
-      document.getElementById('loading').style.display = 'none';
-      const eb = document.getElementById('error-box');
-      eb.style.display = 'block';
-      eb.textContent = 'Hinweis: ' + err.message;
-      document.getElementById('count-line').textContent = 'Keine Einträge geladen';
-    }
-  }
-
-  function renderList() {
-    const list = document.getElementById('entry-list');
-    const none = document.getElementById('no-entries');
-    list.innerHTML = '';
-    document.getElementById('count-line').textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
-    if (!entries.length) { none.style.display = 'block'; list.style.display = 'none'; return; }
-    none.style.display = 'none'; list.style.display = 'block';
-    entries.forEach(function(entry) {
-      const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'▪ Foto':''].filter(Boolean);
-      const div = document.createElement('div');
-      div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
-      div.innerHTML = '<div class="ei-title">' + entry.title + '</div>' +
-        '<div class="ei-meta">' + badges.map(function(b) { return '<span class="badge">' + b + '</span>'; }).join('') + '</div>';
-      div.addEventListener('click', function() { showDetail(entry.id); });
-      list.appendChild(div);
-    });
-  }
-
-  function el(tag, cls, text) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  }
-
-  function showDetail(id) {
-    activeId = id;
-    const entry = entries.find(function(e) { return e.id === id; });
-    if (!entry) return;
-    Object.entries(markers).forEach(function(pair) { pair[1].setIcon(makeIcon(String(pair[0]) === String(id))); });
-    map.panTo([entry.lat, entry.lng]);
-    document.getElementById('detail-title').textContent = entry.title;
-    const body = document.getElementById('detail-body');
-    body.innerHTML = '';
-
-    const photoSrc = driveViewLink(entry.photourl);
-    if (photoSrc) {
-      const img = document.createElement('img');
-      img.className = 'detail-photo'; img.src = photoSrc; img.alt = entry.title;
-      img.onerror = function() { img.remove(); };
-      body.appendChild(img);
-    }
-
-    [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(function(pair) {
-      const src = driveDirectLink(entry[pair[0]]);
-      if (src) {
-        body.appendChild(el('div', 'section-label', entry[pair[1]]));
-        const aud = document.createElement('audio');
-        aud.src = src; aud.controls = true;
-        body.appendChild(aud);
-      }
-    });
-
-    if (entry.notes) {
-      body.appendChild(el('div', 'section-label', 'Notizen'));
-      body.appendChild(el('div', 'notes-text', entry.notes));
-    }
-
-    body.appendChild(el('div', 'coords-text', entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)));
-
-    document.getElementById('entry-list-view').style.display = 'none';
-    document.getElementById('detail-panel').classList.add('open');
-    renderList();
-  }
-
-  document.getElementById('btn-back').addEventListener('click', function() {
-    activeId = null;
-    Object.values(markers).forEach(function(m) { m.setIcon(makeIcon(false)); });
-    document.getElementById('detail-panel').classList.remove('open');
-    document.getElementById('entry-list-view').style.display = 'block';
-    renderList();
-  });
-
-  document.getElementById('btn-refresh').addEventListener('click', function() {
-    activeId = null;
-    document.getElementById('detail-panel').classList.remove('open');
-    document.getElementById('entry-list-view').style.display = 'block';
-    loadData();
-  });
 
   loadData();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initMap);
-} else {
-  initMap();
-}
-</script>
-</body>
-</html>
+window.toggleSidebar = function() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+};
+
+window.closeSidebar = function
