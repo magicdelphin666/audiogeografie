@@ -212,7 +212,6 @@
 let map = null, entries = [], activeId = null;
 const markers = {};
 
-// Sofortiger Start beim Laden des Dokuments
 document.addEventListener('DOMContentLoaded', () => {
   try {
     map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
@@ -229,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error("Map initialization failed:", e);
   }
 
-  // Event Listener sicher zuweisen
   const btnBack = document.getElementById('btn-back');
   if(btnBack) {
     btnBack.addEventListener('click', () => {
@@ -280,20 +278,16 @@ function makeIcon(active) {
   });
 }
 
-function driveDirectLink(url) {
+// Zuverlässiger Google-Drive Direktlink via Googleusercontent CDN
+function getDriveMediaUrl(url) {
   if (!url) return null;
   url = String(url).trim();
   if (!url) return null;
   const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
-  return m ? 'https://drive.google.com/uc?export=download&id=' + m[1] : url;
-}
-
-function driveViewLink(url) {
-  if (!url) return null;
-  url = String(url).trim();
-  if (!url) return null;
-  const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
-  return m ? 'https://drive.google.com/uc?export=view&id=' + m[1] : url;
+  if (m && m[1]) {
+    return 'https://lh3.googleusercontent.com/d/' + m[1];
+  }
+  return url;
 }
 
 async function loadData() {
@@ -442,20 +436,23 @@ function showDetail(id) {
   const body = document.getElementById('detail-body');
   body.innerHTML = '';
 
-  const photoSrc = driveViewLink(entry.photourl);
+  const photoSrc = getDriveMediaUrl(entry.photourl);
   if (photoSrc) {
     const img = document.createElement('img');
-    img.className = 'detail-photo'; img.src = photoSrc; img.alt = entry.title;
+    img.className = 'detail-photo'; 
+    img.src = photoSrc; 
+    img.alt = entry.title;
     img.onerror = () => { img.remove(); };
     body.appendChild(img);
   }
 
   [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
-    const src = driveDirectLink(entry[urlKey]);
+    const src = getDriveMediaUrl(entry[urlKey]);
     if (src) {
       body.appendChild(el('div', 'section-label', entry[nameKey]));
       const aud = document.createElement('audio');
-      aud.src = src; aud.controls = true;
+      aud.src = src; 
+      aud.controls = true;
       body.appendChild(aud);
     }
   });
@@ -471,6 +468,21 @@ function showDetail(id) {
   document.getElementById('detail-panel').classList.add('open');
   renderList();
 }
+
+document.getElementById('btn-back').addEventListener('click', () => {
+  activeId = null;
+  Object.values(markers).forEach(m => { if(m) m.setIcon(makeIcon(false)); });
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('entry-list-view').style.display = 'block';
+  renderList();
+});
+
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  activeId = null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('entry-list-view').style.display = 'block';
+  loadData();
+});
 </script>
 </body>
 </html>
