@@ -205,4 +205,360 @@
   .detail-photo { width: 100%; border-radius: var(--radius); max-height: 200px; object-fit: cover; border: 0.5px solid var(--border); }
   .section-label { font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
   audio { width: 100%; height: 28px; border-radius: var(--radius); }
-  .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px
+  .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+  .coords-text { font-size: 10px; color: var(--text-faint); }
+
+  #sidebar-footer { padding: 10px 20px; border-top: 0.5px solid var(--border); font-size: 10px; color: var(--text-faint); flex-shrink: 0; text-align: center; letter-spacing: 0.05em; line-height: 2; background: var(--surface); }
+  #sidebar-footer a { color: var(--text-faint); text-decoration: none; }
+  #sidebar-footer a:hover { color: var(--text-muted); }
+  #btn-refresh { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text-muted); font-size: 11px; font-family: var(--mono); padding: 4px 10px; transition: all 0.15s; }
+  #btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
+
+  /* MOBILE */
+  @media (max-width: 640px) {
+    #sidebar {
+      position: fixed; top: 0; right: 0; height: 100%; width: 85vw; max-width: 320px; transform: translateX(100%);
+    }
+    #sidebar.open { transform: translateX(0); }
+    #menu-toggle { display: flex; }
+  }
+</style>
+</head>
+<body>
+
+<!-- WILLKOMMENES POP-UP MODAL -->
+<div id="welcome-modal-overlay">
+  <div id="welcome-modal">
+    <button id="modal-close" onclick="closeWelcomeModal()" title="Schließen">×</button>
+    <div class="modal-subtitle-top">Benjamin Lageder · 2025/26</div>
+    <h2>Audiogeografie Salzburg</h2>
+    <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie – eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon: Märkte, Unterführungen, Räume, Kuhweiden, Bahnsteige. Was ich aufnehme, transformiere ich – durch Granularsynthese, spektrale Bearbeitung, Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern Klangpostkarten: flüchtig, atmosphärisch, ortgebunden.</div>
+    <div class="modal-instruction">Auf der interaktiven Karte sind alle Aufnahme-Orte als Pins markiert. Ein Klick auf einen Pin öffnet den jeweiligen Eintrag mit dem originalen Field Recording, der bearbeiteten Version, einem Foto und kurzen Notizen.</div>
+    <button id="btn-start" onclick="closeWelcomeModal()">Karte erkunden</button>
+  </div>
+</div>
+
+<div id="app">
+  <div id="map"></div>
+  <div id="overlay" onclick="closeSidebar()"></div>
+  <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Menü öffnen">☰</button>
+
+  <div id="sidebar">
+    <div id="sidebar-top">
+      <div class="project-label">Benjamin Lageder · 2025/26</div>
+      <h1>Audiogeografie<br/>Salzburg</h1>
+      <div class="subtitle">Klangliche Kartografien zwischen<br/>Erinnerung und Erfindung</div>
+      <div class="count-line" id="count-line">wird geladen…</div>
+    </div>
+
+    <div id="error-box"></div>
+
+    <div id="entry-list-view">
+      <div id="loading">
+        <div class="spinner"></div>
+        Aufnahmen werden geladen…
+      </div>
+      <div id="entry-list" style="display:none;"></div>
+      <div class="no-entries" id="no-entries" style="display:none;">Noch keine Einträge vorhanden.</div>
+    </div>
+
+    <div id="detail-panel">
+      <div id="detail-head">
+        <button id="btn-back" title="Zurück">←</button>
+        <div id="detail-title"></div>
+      </div>
+      <div id="detail-body"></div>
+    </div>
+
+    <div id="sidebar-footer">
+      <a href="https://benjaminlageder.com" target="_blank">benjaminlageder.com</a><br/>
+      <button id="btn-refresh">↻ Neu laden</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map = null, entries = [], activeId = null;
+const markers = {};
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Pop-up beim ersten Laden öffnen
+  document.getElementById('welcome-modal-overlay').classList.add('open');
+
+  try {
+    map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        subdomains: 'abc',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    setTimeout(() => { if(map) map.invalidateSize(); }, 250);
+  } catch(e) {
+    console.error("Map init error:", e);
+  }
+
+  const btnBack = document.getElementById('btn-back');
+  if(btnBack) {
+    btnBack.addEventListener('click', () => {
+      activeId = null;
+      Object.values(markers).forEach(m => { if(m) m.setIcon(makeIcon(false)); });
+      document.getElementById('detail-panel').classList.remove('open');
+      document.getElementById('entry-list-view').style.display = 'block';
+      renderList();
+    });
+  }
+
+  const btnRefresh = document.getElementById('btn-refresh');
+  if(btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      activeId = null;
+      document.getElementById('detail-panel').classList.remove('open');
+      document.getElementById('entry-list-view').style.display = 'block';
+      loadData();
+    });
+  }
+
+  loadData();
+});
+
+window.closeWelcomeModal = function() {
+  document.getElementById('welcome-modal-overlay').classList.remove('open');
+};
+
+window.toggleSidebar = function() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+};
+
+window.closeSidebar = function() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+};
+
+function openSidebarOnMobile() {
+  if (window.innerWidth <= 640) {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('open');
+  }
+}
+
+function makeIcon(active) {
+  return L.divIcon({
+    className: 'custom-pin' + (active ? ' active' : ''),
+    html: '<div class="pin-dot"></div>',
+    iconSize: [20, 20], 
+    iconAnchor: [10, 10]
+  });
+}
+
+function getDrivePhotoUrl(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  if (!url) return null;
+  const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
+  if (m && m[1]) {
+    return 'https://lh3.googleusercontent.com/d/' + m[1];
+  }
+  return url;
+}
+
+function getAudioUrl(url) {
+  if (!url) return null;
+  return String(url).trim();
+}
+
+async function loadData() {
+  const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
+  const SHEET_NAME = 'Tabelle1';
+  const SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME);
+
+  const loadingEl = document.getElementById('loading');
+  const listEl = document.getElementById('entry-list');
+  const noneEl = document.getElementById('no-entries');
+  const errorEl = document.getElementById('error-box');
+  const countEl = document.getElementById('count-line');
+
+  if(loadingEl) loadingEl.style.display = 'block';
+  if(listEl) listEl.style.display = 'none';
+  if(noneEl) noneEl.style.display = 'none';
+  if(errorEl) errorEl.style.display = 'none';
+  if(countEl) countEl.textContent = 'wird geladen…';
+
+  Object.values(markers).forEach(m => { if(map && m) map.removeLayer(m); });
+  for (const k in markers) delete markers[k];
+  entries = [];
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+
+    const res = await fetch(SHEET_URL, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!res.ok) throw new Error('Google Sheet nicht erreichbar');
+    const text = await res.text();
+    
+    const jsonStr = text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
+    const json = JSON.parse(jsonStr);
+    
+    if (!json.table || !json.table.cols || !json.table.rows) {
+      throw new Error('Keine gültigen Daten im Google Sheet');
+    }
+
+    const cols = json.table.cols.map(c => (c && c.label) ? c.label.toLowerCase().trim() : '');
+    const rows = json.table.rows;
+
+    const get = (row, key) => {
+      const alts = {
+        lat: ['lat','latitude','breitengrad'],
+        lng: ['lng','lon','longitude','längengrad'],
+        titel: ['titel','title','name'],
+        audio1: ['audio1','audio 1'],
+        audio1name: ['audio1name','audio 1 name','audio1 name'],
+        audio2: ['audio2','audio 2'],
+        audio2name: ['audio2name','audio 2 name','audio2 name'],
+        foto: ['foto','photo','bild','image'],
+        notizen: ['notizen','notes','text','beschreibung']
+      };
+      const keys = alts[key] || [key];
+      for (const k of keys) {
+        const idx = cols.indexOf(k);
+        if (idx >= 0 && row.c && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
+      }
+      return '';
+    };
+
+    entries = rows.map((row, i) => {
+      const latVal = get(row,'lat').replace(',', '.');
+      const lngVal = get(row,'lng').replace(',', '.');
+      return {
+        id: i,
+        title:      get(row,'titel') || 'Ort ' + (i+1),
+        lat:        parseFloat(latVal),
+        lng:        parseFloat(lngVal),
+        audio1url:  get(row,'audio1'),
+        audio1name: get(row,'audio1name') || 'Field Recording',
+        audio2url:  get(row,'audio2'),
+        audio2name: get(row,'audio2name') || 'Bearbeitete Version',
+        photourl:   get(row,'foto'),
+        notes:      get(row,'notizen'),
+      };
+    }).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
+
+    if(loadingEl) loadingEl.style.display = 'none';
+    
+    if (map) {
+      entries.forEach(e => {
+        const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
+          .addTo(map).on('click', () => { showDetail(e.id); openSidebarOnMobile(); });
+        markers[e.id] = m;
+      });
+    }
+    renderList();
+
+  } catch(err) {
+    console.error(err);
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(errorEl) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'Hinweis: Konnte Daten nicht laden (' + err.message + ')';
+    }
+    if(countEl) countEl.textContent = '0 Aufnahmen';
+    if(noneEl) noneEl.style.display = 'block';
+  }
+}
+
+function renderList() {
+  const list = document.getElementById('entry-list');
+  const none = document.getElementById('no-entries');
+  const countEl = document.getElementById('count-line');
+  
+  if(!list) return;
+  list.innerHTML = '';
+  if(countEl) countEl.textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
+  
+  if (!entries.length) { 
+    if(none) none.style.display = 'block'; 
+    list.style.display = 'none'; 
+    return; 
+  }
+  
+  if(none) none.style.display = 'none'; 
+  list.style.display = 'block';
+
+  entries.forEach(entry => {
+    const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'▪ Foto':''].filter(Boolean);
+    const div = document.createElement('div');
+    div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
+    div.innerHTML = '<div class="ei-title">' + entry.title + '</div>' +
+      '<div class="ei-meta">' + badges.map(b => '<span class="badge">' + b + '</span>').join('') + '</div>';
+    div.addEventListener('click', () => { showDetail(entry.id); });
+    list.appendChild(div);
+  });
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function showDetail(id) {
+  activeId = id;
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  
+  Object.entries(markers).forEach(([eid, m]) => {
+    if(m) m.setIcon(makeIcon(String(eid) === String(id)));
+  });
+  
+  if (map) map.panTo([entry.lat, entry.lng]);
+  document.getElementById('detail-title').textContent = entry.title;
+  const body = document.getElementById('detail-body');
+  body.innerHTML = '';
+
+  const photoSrc = getDrivePhotoUrl(entry.photourl);
+  if (photoSrc) {
+    const img = document.createElement('img');
+    img.className = 'detail-photo'; 
+    img.src = photoSrc; 
+    img.alt = entry.title;
+    img.onerror = () => { img.remove(); };
+    body.appendChild(img);
+  }
+
+  [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
+    const src = getAudioUrl(entry[urlKey]);
+    if (src) {
+      body.appendChild(el('div', 'section-label', entry[nameKey]));
+      
+      const aud = document.createElement('audio');
+      aud.src = src; 
+      aud.controls = true;
+      aud.preload = 'metadata';
+      aud.type = 'audio/mpeg';
+      
+      body.appendChild(aud);
+    }
+  });
+
+  if (entry.notes) {
+    body.appendChild(el('div', 'section-label', 'Notizen'));
+    body.appendChild(el('div', 'notes-text', entry.notes));
+  }
+
+  body.appendChild(el('div', 'coords-text', entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)));
+
+  document.getElementById('entry-list-view').style.display = 'none';
+  const detailPanel = document.getElementById('detail-panel');
+  if(detailPanel) detailPanel.classList.add('open');
+  renderList();
+}
+</script>
+</body>
+</html>
