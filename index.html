@@ -278,7 +278,7 @@ function makeIcon(active) {
   });
 }
 
-// Spezieller URL-Parser für Fotos (CDN-Vorschau)
+// Foto-Parser (CDN-Vorschau)
 function getDrivePhotoUrl(url) {
   if (!url) return null;
   url = String(url).trim();
@@ -290,15 +290,19 @@ function getDrivePhotoUrl(url) {
   return url;
 }
 
-// Spezieller URL-Parser für Audio (Erzwingt den direkten Download-Stream für HTML5-Player)
-function getDriveAudioUrl(url) {
+// Universal-Audio-Parser: Wandelt Google Drive Links automatisch in direkte Stream-URLs um, belässt Dropbox intakt
+function getAudioUrl(url) {
   if (!url) return null;
   url = String(url).trim();
   if (!url) return null;
+  
+  // Google Drive Link erkennen und in den direkten Download-Stream umwandeln
   const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
   if (m && m[1]) {
     return 'https://drive.google.com/uc?export=download&id=' + m[1];
   }
+  
+  // Dropbox oder andere direkte Links unverändert zurückgeben
   return url;
 }
 
@@ -460,14 +464,14 @@ function showDetail(id) {
 
   [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
     const rawUrl = entry[urlKey];
-    const src = getDriveAudioUrl(rawUrl);
+    const src = getAudioUrl(rawUrl);
     if (src) {
       body.appendChild(el('div', 'section-label', entry[nameKey]));
       
       const aud = document.createElement('audio');
       aud.src = src; 
       aud.controls = true;
-      aud.preload = 'none'; // Wichtig für Browser-Stream-Sicherheit
+      aud.preload = 'none';
       aud.type = 'audio/mpeg';
       
       body.appendChild(aud);
