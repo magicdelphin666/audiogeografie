@@ -80,6 +80,78 @@
   #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 200; }
   #overlay.open { display: block; }
 
+  /* WELCOME MODAL (POP-UP) */
+  #welcome-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,25,22,0.4);
+    backdrop-filter: blur(2px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #welcome-modal-overlay.open { display: flex; }
+  
+  #welcome-modal {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    position: relative;
+    padding: 36px 32px 32px;
+    animation: modalAppear 0.3s ease-out;
+  }
+  @keyframes modalAppear {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  #modal-close {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.15s;
+  }
+  #modal-close:hover { background: var(--surface2); color: var(--text); }
+
+  .modal-subtitle-top { font-size: 10px; letter-spacing: 0.15em; color: var(--text-faint); text-transform: uppercase; margin-bottom: 8px; }
+  #welcome-modal h2 { font-family: var(--serif); font-size: 24px; font-weight: 400; font-style: italic; color: var(--text); line-height: 1.25; margin-bottom: 16px; }
+  .modal-body-text { font-size: 12px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; white-space: pre-line; }
+  .modal-instruction { font-size: 11px; color: var(--text); background: var(--surface2); border-left: 2px solid var(--primary-red); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; line-height: 1.6; margin-bottom: 24px; }
+  
+  #btn-start {
+    display: block;
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: center;
+  }
+  #btn-start:hover { background: var(--accent-dim); }
+
   /* SIDEBAR */
   #sidebar {
     width: 320px;
@@ -153,6 +225,19 @@
 </style>
 </head>
 <body>
+
+<!-- WILLKOMMENES POP-UP MODAL -->
+<div id="welcome-modal-overlay">
+  <div id="welcome-modal">
+    <button id="modal-close" onclick="closeWelcomeModal()" title="Schließen">×</button>
+    <div class="modal-subtitle-top">Benjamin Lageder · 2025/26</div>
+    <h2>Audiogeografie Salzburg</h2>
+    <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie – eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon: Märkte, Unterführungen, Räume, Kuhweiden, Bahnsteige. Was ich aufnehme, transformiere ich – durch Granularsynthese, spektrale Bearbeitung, Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern Klangpostkarten: flüchtig, atmosphärisch, ortgebunden.</div>
+    <div class="modal-instruction">Auf der interaktiven Karte sind alle Aufnahme-Orte als Pins markiert. Ein Klick auf einen Pin öffnet den jeweiligen Eintrag mit dem originalen Field Recording, der bearbeiteten Version, einem Foto und kurzen Notizen.</div>
+    <button id="btn-start" onclick="closeWelcomeModal()">Karte erkunden</button>
+  </div>
+</div>
+
 <div id="app">
   <div id="map"></div>
   <div id="overlay" onclick="closeSidebar()"></div>
@@ -197,8 +282,10 @@
 let map = null, entries = [], activeId = null;
 const markers = {};
 
-// Karte initialisiert sich sofort und unerschütterlich
 window.addEventListener('DOMContentLoaded', () => {
+  // Pop-up beim ersten Laden öffnen
+  document.getElementById('welcome-modal-overlay').classList.add('open');
+
   try {
     map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -238,6 +325,10 @@ window.addEventListener('DOMContentLoaded', () => {
   loadData();
 });
 
+window.closeWelcomeModal = function() {
+  document.getElementById('welcome-modal-overlay').classList.remove('open');
+};
+
 window.toggleSidebar = function() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('overlay').classList.toggle('open');
@@ -275,7 +366,6 @@ function getDrivePhotoUrl(url) {
   return url;
 }
 
-// Universal-Audio-URL (unterstützt Dropbox mit raw=1 oder direkte Pfade ohne Google Drive Zicken)
 function getAudioUrl(url) {
   if (!url) return null;
   return String(url).trim();
