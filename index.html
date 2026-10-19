@@ -29,7 +29,7 @@
   #app { display: flex; height: 100vh; position: relative; }
 
   /* MAP */
-  #map { flex: 1; z-index: 1; }
+  #map { flex: 1; z-index: 1; height: 100%; width: 100%; }
   .leaflet-container { background: #e8e4dc !important; }
   .leaflet-control-attribution { background: rgba(245,244,241,0.85) !important; color: var(--text-faint) !important; font-size: 9px !important; }
   .leaflet-control-attribution a { color: var(--text-faint) !important; }
@@ -178,25 +178,24 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ════════════════════════════════════════════════
-//  KONFIGURATION – nur hier etwas ändern
-// ════════════════════════════════════════════════
 const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
 const SHEET_NAME = 'Tabelle1';
-// ════════════════════════════════════════════════
 
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
 const map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-// Helles Kartenlayout
+// OpenStreetMap Tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
+
+// Nach dem Zeichnen der Karte die Größe neu berechnen
+setTimeout(() => { map.invalidateSize(); }, 300);
 
 let entries = [], activeId = null;
 const markers = {};
@@ -255,11 +254,16 @@ async function loadData() {
 
   try {
     const res = await fetch(SHEET_URL);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw new Error('Google Sheet konnte nicht geladen werden. Bitte Freigabe prüfen.');
     const text = await res.text();
     const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
-    const cols  = json.table.cols.map(c => c.label.toLowerCase().trim());
-    const rows  = json.table.rows;
+    
+    if (!json.table || !json.table.cols || !json.table.rows) {
+      throw new Error('Ungültiges Datenformat im Google Sheet.');
+    }
+
+    const cols = json.table.cols.map(c => (c && c.label) ? c.label.toLowerCase().trim() : '');
+    const rows = json.table.rows;
 
     const get = (row, key) => {
       const alts = {
@@ -277,7 +281,7 @@ async function loadData() {
       const keys = alts[key] || [key];
       for (const k of keys) {
         const idx = cols.indexOf(k);
-        if (idx >= 0 && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
+        if (idx >= 0 && row.c && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
       }
       return '';
     };
@@ -285,8 +289,8 @@ async function loadData() {
     entries = rows.map((row, i) => ({
       id: i,
       title:      get(row,'titel') || 'Ort ' + (i+1),
-      lat:        parseFloat(get(row,'lat')),
-      lng:        parseFloat(get(row,'lng')),
+      lat:        parseFloat(get(row,'lat').replace(',', '.')),
+      lng:        parseFloat(get(row,'lng').replace(',', '.')),
       datum:      get(row,'datum'),
       audio1url:  get(row,'audio1'),
       audio1name: get(row,'audio1name') || 'Field Recording',
@@ -308,7 +312,7 @@ async function loadData() {
     document.getElementById('loading').style.display = 'none';
     const eb = document.getElementById('error-box');
     eb.style.display = 'block';
-    eb.textContent = 'Fehler: ' + err.message;
+    eb.textContent = 'Hinweis: ' + err.message;
     document.getElementById('count-line').textContent = 'Fehler beim Laden';
   }
 }
