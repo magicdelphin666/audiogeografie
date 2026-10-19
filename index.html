@@ -212,7 +212,7 @@
 let map = null, entries = [], activeId = null;
 const markers = {};
 
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
   try {
     map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -278,13 +278,26 @@ function makeIcon(active) {
   });
 }
 
-function getDriveMediaUrl(url) {
+// Spezieller URL-Parser für Fotos (CDN-Vorschau)
+function getDrivePhotoUrl(url) {
   if (!url) return null;
   url = String(url).trim();
   if (!url) return null;
   const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
   if (m && m[1]) {
     return 'https://lh3.googleusercontent.com/d/' + m[1];
+  }
+  return url;
+}
+
+// Spezieller URL-Parser für Audio (Erzwingt den direkten Download-Stream für HTML5-Player)
+function getDriveAudioUrl(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  if (!url) return null;
+  const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
+  if (m && m[1]) {
+    return 'https://drive.google.com/uc?export=download&id=' + m[1];
   }
   return url;
 }
@@ -435,7 +448,7 @@ function showDetail(id) {
   const body = document.getElementById('detail-body');
   body.innerHTML = '';
 
-  const photoSrc = getDriveMediaUrl(entry.photourl);
+  const photoSrc = getDrivePhotoUrl(entry.photourl);
   if (photoSrc) {
     const img = document.createElement('img');
     img.className = 'detail-photo'; 
@@ -446,14 +459,15 @@ function showDetail(id) {
   }
 
   [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
-    const src = getDriveMediaUrl(entry[urlKey]);
+    const rawUrl = entry[urlKey];
+    const src = getDriveAudioUrl(rawUrl);
     if (src) {
       body.appendChild(el('div', 'section-label', entry[nameKey]));
       
       const aud = document.createElement('audio');
       aud.src = src; 
       aud.controls = true;
-      aud.preload = 'metadata';
+      aud.preload = 'none'; // Wichtig für Browser-Stream-Sicherheit
       aud.type = 'audio/mpeg';
       
       body.appendChild(aud);
@@ -468,25 +482,10 @@ function showDetail(id) {
   body.appendChild(el('div', 'coords-text', entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)));
 
   document.getElementById('entry-list-view').style.display = 'none';
-  document.getElementById('detail-panel').classList.open ? document.getElementById('detail-panel').classList.add('open') : document.getElementById('detail-panel').className = 'open';
-  document.getElementById('detail-panel').classList.add('open');
+  const detailPanel = document.getElementById('detail-panel');
+  if(detailPanel) detailPanel.classList.add('open');
   renderList();
 }
-
-document.getElementById('btn-back').addEventListener('click', () => {
-  activeId = null;
-  Object.values(markers).forEach(m => { if(m) m.setIcon(makeIcon(false)); });
-  document.getElementById('detail-panel').classList.remove('open');
-  document.getElementById('entry-list-view').style.display = 'block';
-  renderList();
-});
-
-document.getElementById('btn-refresh').addEventListener('click', () => {
-  activeId = null;
-  document.getElementById('detail-panel').classList.remove('open');
-  document.getElementById('entry-list-view').style.display = 'block';
-  loadData();
-});
 </script>
 </body>
 </html>
