@@ -152,6 +152,51 @@
   }
   #btn-start:hover { background: var(--accent-dim); }
 
+  /* LIGHTBOX POP-UP FÜR BILDER */
+  #lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: zoom-out;
+  }
+  #lightbox-overlay.open { display: flex; }
+  
+  #lightbox-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: var(--radius);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    object-fit: contain;
+    cursor: default;
+    animation: modalAppear 0.25s ease-out;
+  }
+
+  #lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ffffff;
+    font-family: var(--mono);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s;
+  }
+  #lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
+
   /* SIDEBAR */
   #sidebar {
     width: 320px;
@@ -202,7 +247,17 @@
   #detail-body::-webkit-scrollbar { width: 3px; }
   #detail-body::-webkit-scrollbar-thumb { background: var(--text-faint); }
 
-  .detail-photo { width: 100%; border-radius: var(--radius); max-height: 200px; object-fit: cover; border: 0.5px solid var(--border); }
+  .detail-photo {
+    width: 100%;
+    border-radius: var(--radius);
+    max-height: 200px;
+    object-fit: cover;
+    border: 0.5px solid var(--border);
+    cursor: zoom-in;
+    transition: opacity 0.15s;
+  }
+  .detail-photo:hover { opacity: 0.9; }
+
   .section-label { font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
   audio { width: 100%; height: 28px; border-radius: var(--radius); }
   .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
@@ -232,10 +287,16 @@
     <button id="modal-close" onclick="closeWelcomeModal()" title="Schließen">×</button>
     <div class="modal-subtitle-top">Benjamin Lageder · 2025/26</div>
     <h2>Audiogeografie Salzburg</h2>
-    <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie – eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon: Märkte, Unterführungen, Räume, Kuhweiden, Bahnsteige. Was ich aufnehme, transformiere ich – durch Granularsynthese, spektrale Bearbeitung, Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern Klangpostkarten: flüchtig, atmosphärisch, ortgebunden.</div>
-    <div class="modal-instruction">Auf der interaktiven Karte sind alle Aufnahme-Orte als Pins markiert. Ein Klick auf einen Pin öffnet den jeweiligen Eintrag mit dem originalen Field Recording, der bearbeiteten Version, einem Foto und kurzen Notizen.</div>
+    <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie und eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon. Dazu gehören Märkte, Unterführungen, Räume, Kuhweiden und Bahnsteige. Was ich aufnehme, transformiere ich durch Granularsynthese, spektrale Bearbeitung und Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern flüchtige, atmosphärische und ortgebunden Klangpostkarten.</div>
+    <div class="modal-instruction">Auf der interaktiven Karte sind alle Aufnahmeorte als Pins markiert. Ein Klick auf einen Pin öffnet den jeweiligen Eintrag mit dem originalen Field Recording, der bearbeiteten Version, einem Foto und kurzen Notizen.</div>
     <button id="btn-start" onclick="closeWelcomeModal()">Karte erkunden</button>
   </div>
+</div>
+
+<!-- LIGHTBOX MODAL (BILDER-GROSSANSICHT) -->
+<div id="lightbox-overlay" onclick="closeLightbox()">
+  <button id="lightbox-close" onclick="closeLightbox()" title="Schließen">×</button>
+  <img id="lightbox-img" src="" alt="Vergrößerte Ansicht" onclick="event.stopPropagation()"/>
 </div>
 
 <div id="app">
@@ -327,6 +388,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
 window.closeWelcomeModal = function() {
   document.getElementById('welcome-modal-overlay').classList.remove('open');
+};
+
+window.openLightbox = function(src) {
+  const lbImg = document.getElementById('lightbox-img');
+  const lbOverlay = document.getElementById('lightbox-overlay');
+  if (lbImg && lbOverlay) {
+    lbImg.src = src;
+    lbOverlay.classList.add('open');
+  }
+};
+
+window.closeLightbox = function() {
+  const lbOverlay = document.getElementById('lightbox-overlay');
+  if (lbOverlay) {
+    lbOverlay.classList.remove('open');
+  }
 };
 
 window.toggleSidebar = function() {
@@ -528,6 +605,8 @@ function showDetail(id) {
     img.className = 'detail-photo'; 
     img.src = photoSrc; 
     img.alt = entry.title;
+    img.title = 'Klicken zum Vergrößern';
+    img.onclick = () => { openLightbox(photoSrc); };
     img.onerror = () => { img.remove(); };
     body.appendChild(img);
   }
