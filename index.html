@@ -439,3 +439,238 @@ function getDrivePhotoUrl(url) {
   if (m && m[1]) {
     return 'https://lh3.googleusercontent.com/d/' + m[1];
   }
+  return url;
+}
+
+function getAudioUrl(url) {
+  if (!url) return null;
+  return String(url).trim();
+}
+
+// Robuster CSV Parser der Anführungszeichen und Kommas korrekt verarbeitet
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  if (lines.length === 0) return result;
+
+  const parseRow = (line) => {
+    const row = [];
+    let insideQuote = false;
+    let entry = '';
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (insideQuote && line[i + 1] === '"') {
+          entry += '"';
+          i++;
+        } else {
+          insideQuote = !insideQuote;
+        }
+      } else if (c === ',' && !insideQuote) {
+        row.push(entry.trim());
+        entry = '';
+      } else {
+        entry += c;
+      }
+    }
+    row.push(entry.trim());
+    return row;
+  };
+
+  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/['"]+/g, '').trim());
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseRow(lines[i]);
+    const obj = {};
+    headers.forEach((h, idx) => {
+      obj[h] = cols[idx] !== undefined ? cols[idx].replace(/^["']|["']$/g, '').trim() : '';
+    });
+    result.push(obj);
+  }
+  return result;
+}
+
+async function loadData() {
+  const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
+  // Nutzt den stabilen CSV Export Link statt der fehleranfälligen JSON API
+  const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&id=' + SHEET_ID;
+
+  const loadingEl = document.getElementById('loading');
+  const listEl = document.getElementById('entry-list');
+  const noneEl = document.getElementById('no-entries');
+  const errorEl = document.getElementById('error-box');
+  const countEl = document.getElementById('count-line');
+
+  if(loadingEl) loadingEl.style.display = 'block';
+  if(listEl) listEl.style.display = 'none';
+  if(noneEl) noneEl.style.display = 'none';
+  if(errorEl) errorEl.style.display = 'none';
+  if(countEl) countEl.textContent = 'wird geladen…';
+
+  Object.values(markers).forEach(m => { if(map && m) map.removeLayer(m); });
+  for (const k in markers) delete markers[k];
+  entries = [];
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(CSV_URL, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!res.ok) throw new Error('Google Sheet nicht erreichbar (Status ' + res.status + ')');
+    const csvText = await res.text();
+    
+    const rows = parseCSV(csvText);
+    if (!rows.length) throw new Error('Keine Zeilen im Google Sheet gefunden');
+
+    const getCol = (row, keys) => {
+      for (const k of keys) {
+        // Suche exakt oder als Teilstring
+        for (const rKey of Object.keys(row)) {
+          if (rKey === k || rKey.includes(k)) {
+            if (row[rKey] != null && row[rKey] !== '') return row[rKey];
+          }
+        }
+      }
+      return '';
+    };
+
+    entries = rows.map((row, i) => {
+      const latVal = String(getCol(row, ['lat', 'latitude', 'breitengrad'])).replace(',', '.');
+      const lngVal = String(getCol(row, ['lng', 'lon', 'longitude', 'längengrad'])).replace(',', '.');
+      
+      return {
+        id: i,
+        title:      getCol(row, ['titel', 'title', 'name']) || ('Ort ' + (i + 1)),
+        lat:        parseFloat(latVal),
+        lng:        parseFloat(lngVal),
+        audio1url:  getCol(row, ['audio1', 'audio 1']),
+        audio1name: getCol(row, ['audio1name', 'audio 1 name', 'audio1 name']) || 'Field Recording',
+        audio2url:  getCol(row, ['audio2', 'audio 2']),
+        audio2name: getCol(row, ['audio2name', 'audio 2 name', 'audio2 name']) || 'Bearbeitete Version',
+        photourl:   getCol(row, ['foto', 'photo', 'bild', 'image']),
+        notes:      getCol(row, ['notizen', 'notes', 'text', 'beschreibung']),
+      };
+    }).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
+
+    if(loadingEl) loadingEl.style.display = 'none';
+    
+    if (map) {
+      entries.forEach(e => {
+        const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
+          .addTo(map).on('click', () => { showDetail(e.id); openSidebarOnMobile(); });
+        markers[e.id] = m;
+      });
+    }
+    renderList();
+
+  } catch(err) {
+    console.error(err);
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(errorEl) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'Hinweis: Konnte Daten nicht laden (' + err.message + '). Bitte prüfen, ob das Google Sheet öffentlich freigegeben ist.';
+    }
+    if(countEl) countEl.textContent = '0 Aufnahmen';
+    if(noneEl) noneEl.style.display = 'block';
+  }
+}
+
+function renderList() {
+  const list = document.getElementById('entry-list');
+  const none = document.getElementById('no-entries');
+  const countEl = document.getElementById('count-line');
+  
+  if(!list) return;
+  list.innerHTML = '';
+  if(countEl) countEl.textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
+  
+  if (!entries.length) { 
+    if(none) none.style.display = 'block'; 
+    list.style.display = 'none'; 
+    return; 
+  }
+  
+  if(none) none.style.display = 'none'; 
+  list.style.display = 'block';
+
+  entries.forEach(entry => {
+    const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'▪ Foto':''].filter(Boolean);
+    const div = document.createElement('div');
+    div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
+    div.innerHTML = '<div class="ei-title">' + entry.title + '</div>' +
+      '<div class="ei-meta">' + badges.map(b => '<span class="badge">' + b + '</span>').join('') + '</div>';
+    div.addEventListener('click', () => { showDetail(entry.id); });
+    list.appendChild(div);
+  });
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function showDetail(id) {
+  activeId = id;
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  
+  Object.entries(markers).forEach(([eid, m]) => {
+    if(m) m.setIcon(makeIcon(String(eid) === String(id)));
+  });
+  
+  if (map) map.panTo([entry.lat, entry.lng]);
+  document.getElementById('detail-title').textContent = entry.title;
+  const body = document.getElementById('detail-body');
+  body.innerHTML = '';
+
+  const photoSrc = getDrivePhotoUrl(entry.photourl);
+  if (photoSrc) {
+    const img = document.createElement('img');
+    img.className = 'detail-photo'; 
+    img.src = photoSrc; 
+    img.alt = entry.title;
+    img.title = 'Klicken zum Vergrößern';
+    
+    img.addEventListener('click', () => {
+      openLightbox(photoSrc);
+    });
+    
+    img.onerror = () => { img.remove(); };
+    body.appendChild(img);
+  }
+
+  [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
+    const src = getAudioUrl(entry[urlKey]);
+    if (src) {
+      body.appendChild(el('div', 'section-label', entry[nameKey]));
+      
+      const aud = document.createElement('audio');
+      aud.src = src; 
+      aud.controls = true;
+      aud.preload = 'metadata';
+      aud.type = 'audio/mpeg';
+      
+      body.appendChild(aud);
+    }
+  });
+
+  if (entry.notes) {
+    body.appendChild(el('div', 'section-label', 'Notizen'));
+    body.appendChild(el('div', 'notes-text', entry.notes));
+  }
+
+  body.appendChild(el('div', 'coords-text', entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)));
+
+  document.getElementById('entry-list-view').style.display = 'none';
+  const detailPanel = document.getElementById('detail-panel');
+  if(detailPanel) detailPanel.classList.add('open');
+  renderList();
+}
+</script>
+</body>
+</html>
