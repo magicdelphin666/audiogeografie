@@ -344,7 +344,6 @@ let map = null, entries = [], activeId = null;
 const markers = {};
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Pop-up beim ersten Laden öffnen
   document.getElementById('welcome-modal-overlay').classList.add('open');
 
   try {
@@ -386,35 +385,35 @@ window.addEventListener('DOMContentLoaded', () => {
   loadData();
 });
 
-window.closeWelcomeModal = function() {
+function closeWelcomeModal() {
   document.getElementById('welcome-modal-overlay').classList.remove('open');
-};
+}
 
-window.openLightbox = function(src) {
+function openLightbox(src) {
   const lbImg = document.getElementById('lightbox-img');
   const lbOverlay = document.getElementById('lightbox-overlay');
   if (lbImg && lbOverlay) {
     lbImg.src = src;
     lbOverlay.classList.add('open');
   }
-};
+}
 
-window.closeLightbox = function() {
+function closeLightbox() {
   const lbOverlay = document.getElementById('lightbox-overlay');
   if (lbOverlay) {
     lbOverlay.classList.remove('open');
   }
-};
+}
 
-window.toggleSidebar = function() {
+function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('overlay').classList.toggle('open');
-};
+}
 
-window.closeSidebar = function() {
+function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('open');
-};
+}
 
 function openSidebarOnMobile() {
   if (window.innerWidth <= 640) {
@@ -440,204 +439,3 @@ function getDrivePhotoUrl(url) {
   if (m && m[1]) {
     return 'https://lh3.googleusercontent.com/d/' + m[1];
   }
-  return url;
-}
-
-function getAudioUrl(url) {
-  if (!url) return null;
-  return String(url).trim();
-}
-
-async function loadData() {
-  const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
-  const SHEET_NAME = 'Tabelle1';
-  const SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME);
-
-  const loadingEl = document.getElementById('loading');
-  const listEl = document.getElementById('entry-list');
-  const noneEl = document.getElementById('no-entries');
-  const errorEl = document.getElementById('error-box');
-  const countEl = document.getElementById('count-line');
-
-  if(loadingEl) loadingEl.style.display = 'block';
-  if(listEl) listEl.style.display = 'none';
-  if(noneEl) noneEl.style.display = 'none';
-  if(errorEl) errorEl.style.display = 'none';
-  if(countEl) countEl.textContent = 'wird geladen…';
-
-  Object.values(markers).forEach(m => { if(map && m) map.removeLayer(m); });
-  for (const k in markers) delete markers[k];
-  entries = [];
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
-
-    const res = await fetch(SHEET_URL, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!res.ok) throw new Error('Google Sheet nicht erreichbar');
-    const text = await res.text();
-    
-    const jsonStr = text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
-    const json = JSON.parse(jsonStr);
-    
-    if (!json.table || !json.table.cols || !json.table.rows) {
-      throw new Error('Keine gültigen Daten im Google Sheet');
-    }
-
-    const cols = json.table.cols.map(c => (c && c.label) ? c.label.toLowerCase().trim() : '');
-    const rows = json.table.rows;
-
-    const get = (row, key) => {
-      const alts = {
-        lat: ['lat','latitude','breitengrad'],
-        lng: ['lng','lon','longitude','längengrad'],
-        titel: ['titel','title','name'],
-        audio1: ['audio1','audio 1'],
-        audio1name: ['audio1name','audio 1 name','audio1 name'],
-        audio2: ['audio2','audio 2'],
-        audio2name: ['audio2name','audio 2 name','audio2 name'],
-        foto: ['foto','photo','bild','image'],
-        notizen: ['notizen','notes','text','beschreibung']
-      };
-      const keys = alts[key] || [key];
-      for (const k of keys) {
-        const idx = cols.indexOf(k);
-        if (idx >= 0 && row.c && row.c[idx] && row.c[idx].v != null) return String(row.c[idx].v).trim();
-      }
-      return '';
-    };
-
-    entries = rows.map((row, i) => {
-      const latVal = get(row,'lat').replace(',', '.');
-      const lngVal = get(row,'lng').replace(',', '.');
-      return {
-        id: i,
-        title:      get(row,'titel') || 'Ort ' + (i+1),
-        lat:        parseFloat(latVal),
-        lng:        parseFloat(lngVal),
-        audio1url:  get(row,'audio1'),
-        audio1name: get(row,'audio1name') || 'Field Recording',
-        audio2url:  get(row,'audio2'),
-        audio2name: get(row,'audio2name') || 'Bearbeitete Version',
-        photourl:   get(row,'foto'),
-        notes:      get(row,'notizen'),
-      };
-    }).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
-
-    if(loadingEl) loadingEl.style.display = 'none';
-    
-    if (map) {
-      entries.forEach(e => {
-        const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
-          .addTo(map).on('click', () => { showDetail(e.id); openSidebarOnMobile(); });
-        markers[e.id] = m;
-      });
-    }
-    renderList();
-
-  } catch(err) {
-    console.error(err);
-    if(loadingEl) loadingEl.style.display = 'none';
-    if(errorEl) {
-      errorEl.style.display = 'block';
-      errorEl.textContent = 'Hinweis: Konnte Daten nicht laden (' + err.message + ')';
-    }
-    if(countEl) countEl.textContent = '0 Aufnahmen';
-    if(noneEl) noneEl.style.display = 'block';
-  }
-}
-
-function renderList() {
-  const list = document.getElementById('entry-list');
-  const none = document.getElementById('no-entries');
-  const countEl = document.getElementById('count-line');
-  
-  if(!list) return;
-  list.innerHTML = '';
-  if(countEl) countEl.textContent = entries.length + ' Aufnahme' + (entries.length === 1 ? '' : 'n');
-  
-  if (!entries.length) { 
-    if(none) none.style.display = 'block'; 
-    list.style.display = 'none'; 
-    return; 
-  }
-  
-  if(none) none.style.display = 'none'; 
-  list.style.display = 'block';
-
-  entries.forEach(entry => {
-    const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'▪ Foto':''].filter(Boolean);
-    const div = document.createElement('div');
-    div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
-    div.innerHTML = '<div class="ei-title">' + entry.title + '</div>' +
-      '<div class="ei-meta">' + badges.map(b => '<span class="badge">' + b + '</span>').join('') + '</div>';
-    div.addEventListener('click', () => { showDetail(entry.id); });
-    list.appendChild(div);
-  });
-}
-
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
-
-function showDetail(id) {
-  activeId = id;
-  const entry = entries.find(e => e.id === id);
-  if (!entry) return;
-  
-  Object.entries(markers).forEach(([eid, m]) => {
-    if(m) m.setIcon(makeIcon(String(eid) === String(id)));
-  });
-  
-  if (map) map.panTo([entry.lat, entry.lng]);
-  document.getElementById('detail-title').textContent = entry.title;
-  const body = document.getElementById('detail-body');
-  body.innerHTML = '';
-
-  const photoSrc = getDrivePhotoUrl(entry.photourl);
-  if (photoSrc) {
-    const img = document.createElement('img');
-    img.className = 'detail-photo'; 
-    img.src = photoSrc; 
-    img.alt = entry.title;
-    img.title = 'Klicken zum Vergrößern';
-    img.onclick = () => { openLightbox(photoSrc); };
-    img.onerror = () => { img.remove(); };
-    body.appendChild(img);
-  }
-
-  [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
-    const src = getAudioUrl(entry[urlKey]);
-    if (src) {
-      body.appendChild(el('div', 'section-label', entry[nameKey]));
-      
-      const aud = document.createElement('audio');
-      aud.src = src; 
-      aud.controls = true;
-      aud.preload = 'metadata';
-      aud.type = 'audio/mpeg';
-      
-      body.appendChild(aud);
-    }
-  });
-
-  if (entry.notes) {
-    body.appendChild(el('div', 'section-label', 'Notizen'));
-    body.appendChild(el('div', 'notes-text', entry.notes));
-  }
-
-  body.appendChild(el('div', 'coords-text', entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)));
-
-  document.getElementById('entry-list-view').style.display = 'none';
-  const detailPanel = document.getElementById('detail-panel');
-  if(detailPanel) detailPanel.classList.add('open');
-  renderList();
-}
-</script>
-</body>
-</html>
