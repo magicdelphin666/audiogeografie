@@ -6,6 +6,8 @@
 <title>Audiogeografie Salzburg – Benjamin Lageder</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<!-- PapaParse für den absolut stabilen CSV-Import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -447,54 +449,9 @@ function getAudioUrl(url) {
   return String(url).trim();
 }
 
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/);
-  const result = [];
-  if (lines.length === 0) return result;
-
-  const parseRow = (line) => {
-    const row = [];
-    let insideQuote = false;
-    let entry = '';
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') {
-        if (insideQuote && line[i + 1] === '"') {
-          entry += '"';
-          i++;
-        } else {
-          insideQuote = !insideQuote;
-        }
-      } else if (c === ',' && !insideQuote) {
-        row.push(entry.trim());
-        entry = '';
-      } else {
-        entry += c;
-      }
-    }
-    row.push(entry.trim());
-    return row;
-  };
-
-  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/['"]+/g, '').trim());
-
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const cols = parseRow(lines[i]);
-    const obj = {};
-    headers.forEach((h, idx) => {
-      obj[h] = cols[idx] !== undefined ? cols[idx].replace(/^["']|["']$/g, '').trim() : '';
-    });
-    result.push(obj);
-  }
-  return result;
-}
-
-async function loadData() {
+function loadData() {
   const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
-  const targetUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv';
-  // Proxy-URL umgeht jegliche CORS-Blockaden des Browsers
-  const PROXY_URL = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
+  const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&id=' + SHEET_ID;
 
   const loadingEl = document.getElementById('loading');
   const listEl = document.getElementById('entry-list');
@@ -512,67 +469,73 @@ async function loadData() {
   for (const k in markers) delete markers[k];
   entries = [];
 
-  try {
-    const res = await fetch(PROXY_URL);
-    if (!res.ok) throw new Error('Netzwerkfehler beim Laden');
-    const data = await res.json();
-    
-    if (!data.contents) throw new Error('Konnte Tabellen-Inhalt nicht lesen');
-    const csvText = data.contents;
-    
-    const rows = parseCSV(csvText);
-    if (!rows.length) throw new Error('Keine Zeilen im Google Sheet gefunden');
+  Papa.parse(CSV_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      if(loadingEl) loadingEl.style.display = 'none';
 
-    const getCol = (row, keys) => {
-      for (const k of keys) {
-        for (const rKey of Object.keys(row)) {
-          if (rKey === k || rKey.includes(k)) {
-            if (row[rKey] != null && row[rKey] !== '') return row[rKey];
-          }
+      if (!results.data || results.data.length === 0) {
+        if(errorEl) {
+          errorEl.style.display = 'block';
+          errorEl.textContent = 'Hinweis: Das Google Sheet enthält keine Daten oder ist nicht öffentlich.';
         }
+        if(countEl) countEl.textContent = '0 Aufnahmen';
+        if(noneEl) noneEl.style.display = 'block';
+        return;
       }
-      return '';
-    };
 
-    entries = rows.map((row, i) => {
-      const latVal = String(getCol(row, ['lat', 'latitude', 'breitengrad'])).replace(',', '.');
-      const lngVal = String(getCol(row, ['lng', 'lon', 'longitude', 'längengrad'])).replace(',', '.');
-      
-      return {
-        id: i,
-        title:      getCol(row, ['titel', 'title', 'name']) || ('Ort ' + (i + 1)),
-        lat:        parseFloat(latVal),
-        lng:        parseFloat(lngVal),
-        audio1url:  getCol(row, ['audio1', 'audio 1']),
-        audio1name: getCol(row, ['audio1name', 'audio 1 name', 'audio1 name']) || 'Field Recording',
-        audio2url:  getCol(row, ['audio2', 'audio 2']),
-        audio2name: getCol(row, ['audio2name', 'audio 2 name', 'audio2 name']) || 'Bearbeitete Version',
-        photourl:   getCol(row, ['foto', 'photo', 'bild', 'image']),
-        notes:      getCol(row, ['notizen', 'notes', 'text', 'beschreibung']),
+      const getCol = (row, keys) => {
+        const rowKeys = Object.keys(row);
+        for (const k of keys) {
+          const match = rowKeys.find(rk => rk.toLowerCase().trim() === k.toLowerCase());
+          if (match && row[match] != null && row[match] !== '') return String(row[match]).trim();
+        }
+        for (const k of keys) {
+          const match = rowKeys.find(rk => rk.toLowerCase().includes(k.toLowerCase()));
+          if (match && row[match] != null && row[match] !== '') return String(row[match]).trim();
+        }
+        return '';
       };
-    }).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
 
-    if(loadingEl) loadingEl.style.display = 'none';
-    
-    if (map) {
-      entries.forEach(e => {
-        const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
-          .addTo(map).on('click', () => { showDetail(e.id); openSidebarOnMobile(); });
-        markers[e.id] = m;
-      });
-    }
-    renderList();
+      entries = results.data.map((row, i) => {
+        const latVal = getCol(row, ['lat', 'latitude', 'breitengrad']).replace(',', '.');
+        const lngVal = getCol(row, ['lng', 'lon', 'longitude', 'längengrad']).replace(',', '.');
+        
+        return {
+          id: i,
+          title:      getCol(row, ['titel', 'title', 'name']) || ('Ort ' + (i + 1)),
+          lat:        parseFloat(latVal),
+          lng:        parseFloat(lngVal),
+          audio1url:  getCol(row, ['audio1', 'audio 1']),
+          audio1name: getCol(row, ['audio1name', 'audio 1 name', 'audio1 name']) || 'Field Recording',
+          audio2url:  getCol(row, ['audio2', 'audio 2']),
+          audio2name: getCol(row, ['audio2name', 'audio 2 name', 'audio2 name']) || 'Bearbeitete Version',
+          photourl:   getCol(row, ['foto', 'photo', 'bild', 'image']),
+          notes:      getCol(row, ['notizen', 'notes', 'text', 'beschreibung']),
+        };
+      }).filter(e => !isNaN(e.lat) && !isNaN(e.lng) && e.lat !== 0);
 
-  } catch(err) {
-    console.error(err);
-    if(loadingEl) loadingEl.style.display = 'none';
-    if(errorEl) {
-      errorEl.style.display = 'block';
-      errorEl.textContent = 'Hinweis: Konnte Daten nicht laden (' + err.message + '). Bitte prüfen, ob das Google Sheet öffentlich freigegeben ist.';
+      if (map) {
+        entries.forEach(e => {
+          const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
+            .addTo(map).on('click', () => { showDetail(e.id); openSidebarOnMobile(); });
+          markers[e.id] = m;
+        });
+      }
+      renderList();
+    },
+    error: function(err) {
+      if(loadingEl) loadingEl.style.display = 'none';
+      if(errorEl) {
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Fehler beim Laden der Tabelle: ' + err.message;
+      }
+      if(countEl) countEl.textContent = '0 Aufnahmen';
+      if(noneEl) noneEl.style.display = 'block';
     }
-    if(countEl) countEl.textContent = '0 Aufnahmen';
-    if(noneEl) noneEl.style.display = 'block';
-  }
+  });
 }
 
 function renderList() {
