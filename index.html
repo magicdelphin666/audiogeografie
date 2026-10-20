@@ -447,7 +447,6 @@ function getAudioUrl(url) {
   return String(url).trim();
 }
 
-// Robuster CSV Parser der Anführungszeichen und Kommas korrekt verarbeitet
 function parseCSV(text) {
   const lines = text.split(/\r?\n/);
   const result = [];
@@ -493,8 +492,9 @@ function parseCSV(text) {
 
 async function loadData() {
   const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
-  // Nutzt den stabilen CSV Export Link statt der fehleranfälligen JSON API
-  const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&id=' + SHEET_ID;
+  const targetUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv';
+  // Proxy-URL umgeht jegliche CORS-Blockaden des Browsers
+  const PROXY_URL = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
 
   const loadingEl = document.getElementById('loading');
   const listEl = document.getElementById('entry-list');
@@ -513,21 +513,18 @@ async function loadData() {
   entries = [];
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    const res = await fetch(CSV_URL, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!res.ok) throw new Error('Google Sheet nicht erreichbar (Status ' + res.status + ')');
-    const csvText = await res.text();
+    const res = await fetch(PROXY_URL);
+    if (!res.ok) throw new Error('Netzwerkfehler beim Laden');
+    const data = await res.json();
+    
+    if (!data.contents) throw new Error('Konnte Tabellen-Inhalt nicht lesen');
+    const csvText = data.contents;
     
     const rows = parseCSV(csvText);
     if (!rows.length) throw new Error('Keine Zeilen im Google Sheet gefunden');
 
     const getCol = (row, keys) => {
       for (const k of keys) {
-        // Suche exakt oder als Teilstring
         for (const rKey of Object.keys(row)) {
           if (rKey === k || rKey.includes(k)) {
             if (row[rKey] != null && row[rKey] !== '') return row[rKey];
