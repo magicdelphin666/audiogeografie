@@ -113,7 +113,7 @@
   .modal-scroll-content {
     overflow-y: auto;
     flex: 1;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     padding-right: 4px;
   }
   .modal-scroll-content::-webkit-scrollbar { width: 3px; }
@@ -138,33 +138,27 @@
   .modal-body-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
   .modal-instruction { font-size: 11px; color: var(--text); background: var(--surface2); border-left: 2px solid var(--primary-red); padding: 10px 12px; border-radius: 0 var(--radius) var(--radius) 0; line-height: 1.5; margin-bottom: 16px; }
 
-  /* FÖRDERUNG HINWEIS MIT LOGO-STYLING */
+  /* FÖRDERUNG HINWEIS & LOGO ZENTRIERT */
   .modal-funding {
     font-size: 10px;
     color: var(--text-muted);
     border-top: 0.5px solid var(--border);
-    padding-top: 12px;
-    margin-top: 12px;
+    padding-top: 14px;
+    margin-top: 14px;
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    text-align: center;
     letter-spacing: 0.05em;
   }
-  .city-logo-badge {
-    display: inline-flex;
-    align-items: center;
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--text);
+  .modal-funding img {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
   }
-  .city-logo-badge .red-dot {
-    color: var(--primary-red);
-    margin-right: 1px;
-    font-style: normal;
-  }
-  
+
   #btn-start {
     display: block; width: 100%;
     background: var(--accent); color: #fff;
@@ -238,98 +232,4 @@
   .badge { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px; padding: 1px 6px; font-size: 10px; color: var(--text-muted); }
 
   #detail-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
-  #detail-panel.open { display: flex; }
-  #detail-head { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; align-items: flex-start; gap: 10px; flex-shrink: 0; background: var(--surface); }
-  #btn-back { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 18px; padding: 0; margin-top: 1px; flex-shrink: 0; font-family: var(--mono); transition: color 0.15s; }
-  #btn-back:hover { color: var(--text); }
-  #detail-title { font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--text); line-height: 1.3; flex: 1; }
-
-  #detail-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); }
-  #detail-body::-webkit-scrollbar { width: 3px; }
-  #detail-body::-webkit-scrollbar-thumb { background: var(--text-faint); }
-
-  .detail-photo {
-    width: 100%; border-radius: var(--radius);
-    max-height: 200px; object-fit: cover;
-    border: 0.5px solid var(--border); cursor: zoom-in;
-    transition: opacity 0.15s;
-  }
-  .detail-photo:hover { opacity: 0.9; }
-
-  .section-label { font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
-  audio { width: 100%; height: 28px; border-radius: var(--radius); }
-  .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
-  .coords-text { font-size: 10px; color: var(--text-faint); }
-
-  /* SIDEBAR FOOTER MIT FÖRDERHINWEIS & LOGO */
-  #sidebar-footer { padding: 12px 20px; border-top: 0.5px solid var(--border); font-size: 10px; color: var(--text-faint); flex-shrink: 0; text-align: center; letter-spacing: 0.05em; line-height: 1.8; background: var(--surface); }
-  #sidebar-footer a { color: var(--text-faint); text-decoration: none; }
-  #sidebar-footer a:hover { color: var(--text-muted); }
-  .footer-funding { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border); color: var(--text-muted); font-size: 9px; letter-spacing: 0.08em; display: flex; align-items: center; justify-content: center; gap: 4px; }
-  #btn-refresh { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text-muted); font-size: 10px; font-family: var(--mono); padding: 3px 8px; margin-bottom: 6px; transition: all 0.15s; }
-  #btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
-
-  @media (max-width: 640px) {
-    #sidebar {
-      position: fixed; top: 0; right: 0; height: 100%; width: 85vw; max-width: 320px; transform: translateX(100%);
-    }
-    #sidebar.open { transform: translateX(0); }
-    #menu-toggle { display: flex; }
-  }
-</style>
-</head>
-<body>
-
-<div id="welcome-modal-overlay">
-  <div id="welcome-modal">
-    <button id="modal-close" onclick="closeWelcomeModal()" title="Schließen">×</button>
-    
-    <div class="modal-scroll-content">
-      <div class="modal-subtitle-top">Benjamin Lageder · 2025/26</div>
-      <h2>Audiogeografie Salzburg</h2>
-      <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie und eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon. Dazu gehören Märkte, Unterführungen, Räume, Kuhweiden und Bahnsteige. Was ich aufnehme, transformiere ich durch Granularsynthese, spektrale Bearbeitung und Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern flüchtige, atmosphärische und ortgebunden Klangpostkarten.</div>
-      <div class="modal-instruction">Auf der interaktiven Karte sind alle Aufnahmeorte als Pins markiert. Ein Klick auf einen Pin öffnet den jeweiligen Eintrag mit dem originalen Field Recording, der bearbeiteten Version, einem Foto und kurzen Notizen.</div>
-      
-      <div class="modal-funding">
-        <span>Gefördert durch</span>
-        <div class="city-logo-badge"><span class="red-dot">:</span>STADT<span class="red-dot">:</span>SALZBURG</div>
-      </div>
-    </div>
-
-    <button id="btn-start" onclick="closeWelcomeModal()">Karte erkunden</button>
-  </div>
-</div>
-
-<div id="lightbox-overlay" onclick="closeLightbox()">
-  <button id="lightbox-close" onclick="closeLightbox()" title="Schließen">×</button>
-  <img id="lightbox-img" src="" alt="Vergrößerte Ansicht" onclick="event.stopPropagation()"/>
-</div>
-
-<div id="app">
-  <div id="map"></div>
-  <div id="overlay" onclick="closeSidebar()"></div>
-  <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Menü öffnen">☰</button>
-
-  <div id="sidebar">
-    <div id="sidebar-top">
-      <div class="project-label">Benjamin Lageder · 2025/26</div>
-      <h1>Audiogeografie<br/>Salzburg</h1>
-      <div class="subtitle">Klangliche Kartografien zwischen<br/>Erinnerung und Erfindung</div>
-      <div class="count-line" id="count-line">wird geladen…</div>
-    </div>
-
-    <div id="error-box"></div>
-
-    <div id="entry-list-view">
-      <div id="loading">
-        <div class="spinner"></div>
-        Aufnahmen werden geladen…
-      </div>
-      <div id="entry-list" style="display:none;"></div>
-      <div class="no-entries" id="no-entries" style="display:none;">Noch keine Einträge vorhanden.</div>
-    </div>
-
-    <div id="detail-panel">
-      <div id="detail-head">
-        <button id="btn-back" title="Zurück">←</button>
-        <div id="
+  #detail
