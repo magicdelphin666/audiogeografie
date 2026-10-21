@@ -32,9 +32,7 @@
 
   #map { flex: 1; height: 100%; width: 100%; z-index: 1; background: #e5e3df; }
   .leaflet-container { background: #e5e3df !important; }
-  .leaflet-tile {
-    filter: grayscale(100%) contrast(85%) brightness(105%);
-  }
+  .leaflet-tile { filter: grayscale(100%) contrast(85%) brightness(105%); }
   .leaflet-control-attribution { background: rgba(245,244,241,0.85) !important; color: var(--text-faint) !important; font-size: 9px !important; }
   .leaflet-control-attribution a { color: var(--text-faint) !important; }
 
@@ -113,7 +111,7 @@
   .modal-scroll-content {
     overflow-y: auto;
     flex: 1;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     padding-right: 4px;
   }
   .modal-scroll-content::-webkit-scrollbar { width: 3px; }
@@ -138,33 +136,35 @@
   .modal-body-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
   .modal-instruction { font-size: 11px; color: var(--text); background: var(--surface2); border-left: 2px solid var(--primary-red); padding: 10px 12px; border-radius: 0 var(--radius) var(--radius) 0; line-height: 1.5; margin-bottom: 16px; }
 
-  /* FÖRDERUNG HINWEIS MIT LOGO-STYLING */
   .modal-funding {
     font-size: 10px;
     color: var(--text-muted);
     border-top: 0.5px solid var(--border);
-    padding-top: 12px;
-    margin-top: 12px;
+    padding-top: 14px;
+    margin-top: 14px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
     letter-spacing: 0.05em;
   }
-  .city-logo-badge {
+  .salzburg-logo-box {
     display: inline-flex;
     align-items: center;
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 12px;
-    font-weight: bold;
+    font-family: Arial, sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.08em;
     color: var(--text);
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: #fff;
   }
-  .city-logo-badge .red-dot {
-    color: var(--primary-red);
-    margin-right: 1px;
-    font-style: normal;
-  }
-  
+  .salzburg-logo-box .colon { color: var(--primary-red); margin: 0 1px; }
+
   #btn-start {
     display: block; width: 100%;
     background: var(--accent); color: #fff;
@@ -261,11 +261,11 @@
   .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
   .coords-text { font-size: 10px; color: var(--text-faint); }
 
-  /* SIDEBAR FOOTER MIT FÖRDERHINWEIS & LOGO */
+  /* SIDEBAR FOOTER */
   #sidebar-footer { padding: 12px 20px; border-top: 0.5px solid var(--border); font-size: 10px; color: var(--text-faint); flex-shrink: 0; text-align: center; letter-spacing: 0.05em; line-height: 1.8; background: var(--surface); }
   #sidebar-footer a { color: var(--text-faint); text-decoration: none; }
   #sidebar-footer a:hover { color: var(--text-muted); }
-  .footer-funding { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border); color: var(--text-muted); font-size: 9px; letter-spacing: 0.08em; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .footer-funding { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border); color: var(--text-muted); font-size: 9px; letter-spacing: 0.08em; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
   #btn-refresh { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text-muted); font-size: 10px; font-family: var(--mono); padding: 3px 8px; margin-bottom: 6px; transition: all 0.15s; }
   #btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
 
@@ -292,7 +292,7 @@
       
       <div class="modal-funding">
         <span>Gefördert durch</span>
-        <div class="city-logo-badge"><span class="red-dot">:</span>STADT<span class="red-dot">:</span>SALZBURG</div>
+        <div class="salzburg-logo-box">STADT<span class="colon">:</span>SALZBURG</div>
       </div>
     </div>
 
@@ -342,7 +342,7 @@
       <a href="https://benjaminlageder.com" target="_blank">benjaminlageder.com</a>
       <div class="footer-funding">
         <span>Gefördert durch</span>
-        <div class="city-logo-badge" style="font-size:10px;"><span class="red-dot">:</span>STADT<span class="red-dot">:</span>SALZBURG</div>
+        <div class="salzburg-logo-box" style="font-size:11px; padding:2px 4px;">STADT<span class="colon">:</span>SALZBURG</div>
       </div>
     </div>
   </div>
@@ -457,7 +457,7 @@ function getAudioUrl(url) {
 
 function loadData() {
   const SHEET_ID = '1x8xMbX0-QupXGrfMCBO4UQ7krhxn8-ewAABtqgIs3Ck';
-  const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&id=' + SHEET_ID;
+  const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=Tabelle1';
 
   const loadingEl = document.getElementById('loading');
   const listEl = document.getElementById('entry-list');
@@ -485,7 +485,7 @@ function loadData() {
       if (!results.data || results.data.length === 0) {
         if(errorEl) {
           errorEl.style.display = 'block';
-          errorEl.textContent = 'Hinweis: Das Google Sheet enthält keine Daten oder ist nicht öffentlich.';
+          errorEl.textContent = 'Hinweis: Das Google Sheet enthält keine Daten oder ist nicht freigegeben.';
         }
         if(countEl) countEl.textContent = '0 Aufnahmen';
         if(noneEl) noneEl.style.display = 'block';
@@ -493,6 +493,7 @@ function loadData() {
       }
 
       const getCol = (row, keys) => {
+        if (!row) return '';
         const rowKeys = Object.keys(row);
         for (const k of keys) {
           const match = rowKeys.find(rk => rk.toLowerCase().trim() === k.toLowerCase());
@@ -506,8 +507,11 @@ function loadData() {
       };
 
       entries = results.data.map((row, i) => {
-        const latVal = getCol(row, ['lat', 'latitude', 'breitengrad']).replace(',', '.');
-        const lngVal = getCol(row, ['lng', 'lon', 'longitude', 'längengrad']).replace(',', '.');
+        const rawLat = getCol(row, ['lat', 'latitude', 'breitengrad']);
+        const rawLng = getCol(row, ['lng', 'lon', 'longitude', 'längengrad']);
+        
+        const latVal = rawLat ? rawLat.replace(',', '.') : '';
+        const lngVal = rawLng ? rawLng.replace(',', '.') : '';
         
         return {
           id: i,
@@ -536,7 +540,7 @@ function loadData() {
       if(loadingEl) loadingEl.style.display = 'none';
       if(errorEl) {
         errorEl.style.display = 'block';
-        errorEl.textContent = 'Fehler beim Laden der Tabelle: ' + err.message;
+        errorEl.textContent = 'Fehler beim Laden der Tabelle. Bitte stelle sicher, dass die Tabelle in Google Sheets unter "Datei -> Im Web veröffentlichen" freigegeben ist.';
       }
       if(countEl) countEl.textContent = '0 Aufnahmen';
       if(noneEl) noneEl.style.display = 'block';
