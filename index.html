@@ -113,7 +113,7 @@
   .modal-scroll-content {
     overflow-y: auto;
     flex: 1;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     padding-right: 4px;
   }
   .modal-scroll-content::-webkit-scrollbar { width: 3px; }
@@ -138,39 +138,33 @@
   .modal-body-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
   .modal-instruction { font-size: 11px; color: var(--text); background: var(--surface2); border-left: 2px solid var(--primary-red); padding: 10px 12px; border-radius: 0 var(--radius) var(--radius) 0; line-height: 1.5; margin-bottom: 16px; }
 
-  /* FÖRDERUNG HINWEIS & LOGO (REIN CSS - HOCHZUVERLÄSSIG) */
+  /* FÖRDERUNG HINWEIS MIT LOGO-STYLING */
   .modal-funding {
     font-size: 10px;
     color: var(--text-muted);
     border-top: 0.5px solid var(--border);
-    padding-top: 14px;
-    margin-top: 14px;
+    padding-top: 12px;
+    margin-top: 12px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    text-align: center;
+    gap: 8px;
     letter-spacing: 0.05em;
   }
-  .salzburg-logo-box {
+  .city-logo-badge {
     display: inline-flex;
     align-items: center;
-    font-family: Arial, sans-serif;
-    font-weight: 800;
-    font-size: 13px;
-    letter-spacing: 0.08em;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12px;
+    font-weight: bold;
     color: var(--text);
-    padding: 3px 6px;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: #fff;
   }
-  .salzburg-logo-box .colon {
+  .city-logo-badge .red-dot {
     color: var(--primary-red);
-    margin: 0 1px;
+    margin-right: 1px;
+    font-style: normal;
   }
-
+  
   #btn-start {
     display: block; width: 100%;
     background: var(--accent); color: #fff;
@@ -267,11 +261,11 @@
   .notes-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
   .coords-text { font-size: 10px; color: var(--text-faint); }
 
-  /* SIDEBAR FOOTER */
+  /* SIDEBAR FOOTER MIT FÖRDERHINWEIS & LOGO */
   #sidebar-footer { padding: 12px 20px; border-top: 0.5px solid var(--border); font-size: 10px; color: var(--text-faint); flex-shrink: 0; text-align: center; letter-spacing: 0.05em; line-height: 1.8; background: var(--surface); }
   #sidebar-footer a { color: var(--text-faint); text-decoration: none; }
   #sidebar-footer a:hover { color: var(--text-muted); }
-  .footer-funding { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border); color: var(--text-muted); font-size: 9px; letter-spacing: 0.08em; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .footer-funding { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border); color: var(--text-muted); font-size: 9px; letter-spacing: 0.08em; display: flex; align-items: center; justify-content: center; gap: 4px; }
   #btn-refresh { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text-muted); font-size: 10px; font-family: var(--mono); padding: 3px 8px; margin-bottom: 6px; transition: all 0.15s; }
   #btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
 
@@ -298,7 +292,7 @@
       
       <div class="modal-funding">
         <span>Gefördert durch</span>
-        <div class="salzburg-logo-box">STADT<span class="colon">:</span>SALZBURG</div>
+        <div class="city-logo-badge"><span class="red-dot">:</span>STADT<span class="red-dot">:</span>SALZBURG</div>
       </div>
     </div>
 
@@ -348,7 +342,7 @@
       <a href="https://benjaminlageder.com" target="_blank">benjaminlageder.com</a>
       <div class="footer-funding">
         <span>Gefördert durch</span>
-        <div class="salzburg-logo-box" style="font-size:11px; padding:2px 4px;">STADT<span class="colon">:</span>SALZBURG</div>
+        <div class="city-logo-badge" style="font-size:10px;"><span class="red-dot">:</span>STADT<span class="red-dot">:</span>SALZBURG</div>
       </div>
     </div>
   </div>
