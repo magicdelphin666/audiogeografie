@@ -311,4 +311,488 @@
   </div>
 </div>
 
-<script src="
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const entries = [
+  {
+    id: 0,
+    title: "LKH Aiglhof, Personalhaus",
+    lat: 47.806160,
+    lng: 13.027635,
+    audio1url: "audio/STE-014.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "audio/STE-014 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1r9Z3EsqqserpdxQyUkNv3SVVXO9nlDCp/view?usp=drive_link",
+    notes: "Betonschneider, LKW lädt Bagger ab, Arbeiter mit Wasserschlauch und Besen."
+  },
+  {
+    id: 1,
+    title: "Kurgarten",
+    lat: 47.806399,
+    lng: 13.041491,
+    audio1url: "STE-015.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-015 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1jTbDbifqGOJKAGv5_BVt1IkCV_vzcKxW/view?usp=sharing",
+    notes: "Frau telefoniert, Fahrräder, ein junges Pärchen und Krähen."
+  },
+  {
+    id: 2,
+    title: "Müllnersteg Neustadt",
+    lat: 47.805259,
+    lng: 13.038559,
+    audio1url: "STE-016.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-016 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/18g88U1QdVPp34OZ0Yos4d9jfTlEfgsHV/view?usp=sharing",
+    notes: "Fahrräder, ein Pärchen mit 2 Hunden, eine Bekannte."
+  },
+  {
+    id: 3,
+    title: "Mirabellgarten",
+    lat: 47.804084,
+    lng: 13.042309,
+    audio1url: "STE-017.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-017 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1O_HKj63ajjJbIxixYZv7ai_O9vRQhtfu/view?usp=drive_link",
+    notes: "Ein Brunnen, viele Touristengruppen."
+  },
+  {
+    id: 4,
+    title: "St. Sebastian Friedhof",
+    lat: 47.804612,
+    lng: 13.047104,
+    audio1url: "STE-019.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-019 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1FPFoEZPNxTNScm9xt3BJIpdK14qOBVta/view?usp=sharing",
+    notes: "Stille, Fenster in der Ferne, Vöglein, Zirpen."
+  },
+  {
+    id: 5,
+    title: "Untere Linzergasse",
+    lat: 47.802277,
+    lng: 13.045575,
+    audio1url: "STE-020.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-020 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1Pior-F8H_dvJYj2076R7WVikL8TbHhe0/view?usp=sharing",
+    notes: "Touristen, Gastronomie, eine alte Bettlerin."
+  },
+  {
+    id: 6,
+    title: "Ritzerbogen",
+    lat: 47.799354,
+    lng: 13.044154,
+    audio1url: "STE-021.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-021 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1rQq-Yqs8FnKmiZq_NqPFIrPrG_BOSOIz/view?usp=sharing",
+    notes: "Touristen, verschiedene Sprachen, ein Zigarettenautomat."
+  },
+  {
+    id: 7,
+    title: "Kollegienkirche",
+    lat: 47.799207,
+    lng: 13.043199,
+    audio1url: "STE-022.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-022 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1cmSK3x6BotS2fKwOhDk5M-ASfI6taGAP/view?usp=sharing",
+    notes: "Mann schläft unter Kerzenständer vor Altar, Besucherinnen, Stühle werden verrückt, Geflüster."
+  },
+  {
+    id: 8,
+    title: "Festungsbahn Talstation",
+    lat: 47.796508,
+    lng: 13.046188,
+    audio1url: "STE-023.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-023 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/drive/folders/1JJzStl-83WThIhNpNFwPsVsvVmCaKit2",
+    notes: "Menschen beraten sich, eine Jalousie eines Schalters wird heruntergefahren, Tickets werden gekauft und gelöst, Bestseller ist das All-inclusive-Ticket."
+  },
+  {
+    id: 9,
+    title: "Büro Galerie 5020",
+    lat: 47.797459,
+    lng: 13.047858,
+    audio1url: "STE-024.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-024 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1iHGQ0qEHfPEpLky-o6Gpy4ERUp8-JBLZ/view?usp=sharing",
+    notes: "Es wird getippt, geklickt, Soletti gesnackt, im Hintergrund eine Baustelle."
+  },
+  {
+    id: 10,
+    title: "Brunnen am Platzl",
+    lat: 47.801485,
+    lng: 13.044964,
+    audio1url: "STE-025.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-025 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1RPtk2IkYv26m7n51YsbCXISIJ6R-PDm9/view?usp=sharing",
+    notes: "Er tut, was er tut, im Hintergrund Straßenlärm und eine Baustelle. Ein Kind freut sich erstaunt."
+  },
+  {
+    id: 11,
+    title: "Fanzybikes",
+    lat: 47.801089,
+    lng: 13.029888,
+    audio1url: "STE-026.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-026 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1IQVlE4QROUOvmfAVoiGNkHfKRmVn_trg/view?usp=sharing",
+    notes: "Zwei junge Mechaniker arbeiten in der Fahrradwerkstatt, am Tresen liegen zwei Donuts."
+  },
+  {
+    id: 12,
+    title: "Leopoldskroner Bad",
+    lat: 47.789626,
+    lng: 13.036139,
+    audio1url: "STE-027.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-027 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1UVmGasQUxxBk0gzz7czVx9cRqzl9_K3y/view?usp=sharing",
+    notes: "Sportbecken, einige Pensionistinnen ziehen ihre Bahnen, ein Mann springt ins Wasser"
+  },
+  {
+    id: 13,
+    title: "Sterneckstraße, Ichi go ichi e",
+    lat: 47.809201,
+    lng: 13.057402,
+    audio1url: "STE-028.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-028 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1-jiFj-TPMxUaAR1cA7w6ERI3pn1OqDdM/view?usp=sharing",
+    notes: "Die Geräuschkulisse einer Straßenkreuzung 2026"
+  },
+  {
+    id: 14,
+    title: "Stadtbibliothek",
+    lat: 47.813433,
+    lng: 13.026882,
+    audio1url: "STE-029.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-029 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/10ReRxxS76q6gmCbT-O0Fomnw-xYnL-2T/view?usp=sharing",
+    notes: "Eine Mitarbeiterin sortiert Bücher ein, Lifttüren öffnen und schließen sich, zwei junge Buben beenden eine Partie Schach."
+  },
+  {
+    id: 15,
+    title: "Supermarkt",
+    lat: 47.813682,
+    lng: 13.026381,
+    audio1url: "STE-030.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-030 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "",
+    notes: "Mineralwasser wird kistenweise abtransportiert, ein alter Mann lässt eine Münze fallen, ein Telefonat im Handyladen, es wird kassiert, Frau mit Rollator."
+  },
+  {
+    id: 16,
+    title: "Lehnerpark",
+    lat: 47.814822,
+    lng: 13.034876,
+    audio1url: "STE-031.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-031 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1RIhLSK8HX9kAuaHASNQVcYPyYYnxw3ZB/view?usp=sharing",
+    notes: "Kinder am Spielplatz, Ayman muss gehen, Vergnügen auf der Drehscheibe."
+  },
+  {
+    id: 17,
+    title: "Hauptbahnhof",
+    lat: 47.812993,
+    lng: 13.044890,
+    audio1url: "STE-032.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-032 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/15wwerJmneZrhjcfjcLpzt-Px7nPgeLrO/view?usp=sharing",
+    notes: "Menschen kommen an, Menschen fahren ab, ein leichter Zug weht durch die Bahnhofshalle."
+  },
+  {
+    id: 18,
+    title: "Paracelsus Bad",
+    lat: 47.806661,
+    lng: 13.040099,
+    audio1url: "STE-033.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-033 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/164aGvfymppQGFJDDES4c_MZovAzzg5Pi/view?usp=sharing",
+    notes: "Zwei Sportschwimmer unterhalten sich, Menschen schwimmen, die Bademeisterin sitz im Kämmerchen am Bildschirm."
+  },
+  {
+    id: 19,
+    title: "Kapuzinerberg nähe Kloster",
+    lat: 47.802021,
+    lng: 13.051056,
+    audio1url: "STE-034.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-034 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1CKlFTjgVNO2DFGc6SB7xX7rpt46io5qP/view?usp=sharing",
+    notes: "Stille, Ein Passant, ein brechender Ast."
+  },
+  {
+    id: 20,
+    title: "Kapuzinerberg Fanziskischlössl",
+    lat: 47.805182,
+    lng: 13.058495,
+    audio1url: "STE-035.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-035 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1HS-18JCTHWsz7Ij-wPcRRzT33yu1ixk-/view?usp=sharing",
+    notes: "Ein junger Mann genießt auf einer Bank die Sonne, eine Frau fotografiert das Panorama und ein älterer Herr verschwindet mit seinem Handy im Wald."
+  },
+  {
+    id: 21,
+    title: "Zweig-Villa",
+    lat: 47.802615,
+    lng: 13.047274,
+    audio1url: "STE-036.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-036 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1-rzxMZliJl3LZH9D12ddkSU8euCdsxxJ/view?usp=sharing",
+    notes: "Leerstand, ein Wanderer passiert, leichter Wind durch die Bäume."
+  },
+  {
+    id: 22,
+    title: "Möchsberg Mülln",
+    lat: 47.805024,
+    lng: 13.035011,
+    audio1url: "STE-037.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-037 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1gWOUT2wET5FKHuye5Q6mprC3tiVOGyc4/view?usp=sharing",
+    notes: "Eine Grille zirpt, in der Ferne eine Baustelle, Autos."
+  },
+  {
+    id: 23,
+    title: "Richterhöhe",
+    lat: 47.793408,
+    lng: 13.040343,
+    audio1url: "STE-038.mp3",
+    audio1name: "Hier ist das original Fieldrecording zu hören",
+    audio2url: "STE-038 WET.mp3",
+    audio2name: "Und hier die bearbeitete Version",
+    photourl: "https://drive.google.com/file/d/1svrQynBGJVuPRiAKZXq3jnhkAzZ4e_L4/view?usp=sharing",
+    notes: "Eine Spaziergängerin, sanfte Böen, ein hustender Mann"
+  }
+];
+
+let map = null, activeId = null;
+const markers = {};
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('welcome-modal-overlay').classList.add('open');
+
+  try {
+    map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        subdomains: 'abc',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    setTimeout(() => { if(map) map.invalidateSize(); }, 250);
+  } catch(e) {
+    console.error("Map init error:", e);
+  }
+
+  const btnBack = document.getElementById('btn-back');
+  if(btnBack) {
+    btnBack.addEventListener('click', () => {
+      activeId = null;
+      Object.values(markers).forEach(m => { if(m) m.setIcon(makeIcon(false)); });
+      document.getElementById('detail-panel').classList.remove('open');
+      document.getElementById('entry-list-view').style.display = 'block';
+      renderList();
+    });
+  }
+
+  if (map) {
+    entries.forEach(e => {
+      const m = L.marker([e.lat, e.lng], { icon: makeIcon(false) })
+        .addTo(map).on('click', () => { showDetail(e.id); openSidebarOnMobile(); });
+      markers[e.id] = m;
+    });
+  }
+  renderList();
+});
+
+function closeWelcomeModal() {
+  document.getElementById('welcome-modal-overlay').classList.remove('open');
+}
+
+function openLightbox(src) {
+  const lbImg = document.getElementById('lightbox-img');
+  const lbOverlay = document.getElementById('lightbox-overlay');
+  if (lbImg && lbOverlay) {
+    lbImg.src = src;
+    lbOverlay.classList.add('open');
+  }
+}
+
+function closeLightbox() {
+  const lbOverlay = document.getElementById('lightbox-overlay');
+  if (lbOverlay) lbOverlay.classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function openSidebarOnMobile() {
+  if (window.innerWidth <= 640) {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('open');
+  }
+}
+
+function makeIcon(active) {
+  return L.divIcon({
+    className: 'custom-pin' + (active ? ' active' : ''),
+    html: '<div class="pin-dot"></div>',
+    iconSize: [20, 20], 
+    iconAnchor: [10, 10]
+  });
+}
+
+function getDrivePhotoUrl(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  if (!url) return null;
+  const m = url.match(/\/d\/([^\/\?&]+)/) || url.match(/id=([^\/\?&]+)/);
+  if (m && m[1]) {
+    return 'https://lh3.googleusercontent.com/d/' + m[1];
+  }
+  return url;
+}
+
+function getAudioUrl(url) {
+  if (!url) return null;
+  return String(url).trim();
+}
+
+function renderList() {
+  const list = document.getElementById('entry-list');
+  const none = document.getElementById('no-entries');
+  const countEl = document.getElementById('count-line');
+  
+  if(!list) return;
+  list.innerHTML = '';
+  if(countEl) countEl.textContent = entries.length + ' Aufnahmen';
+  
+  if (!entries.length) { 
+    if(none) none.style.display = 'block'; 
+    list.style.display = 'none'; 
+    return; 
+  }
+  
+  if(none) none.style.display = 'none'; 
+  list.style.display = 'block';
+
+  entries.forEach(entry => {
+    const badges = [entry.audio1url?'♪ Audio 1':'', entry.audio2url?'♪ Audio 2':'', entry.photourl?'▪ Foto':''].filter(Boolean);
+    const div = document.createElement('div');
+    div.className = 'entry-item' + (entry.id === activeId ? ' active' : '');
+    div.innerHTML = '<div class="ei-title">' + entry.title + '</div>' +
+      '<div class="ei-meta">' + badges.map(b => '<span class="badge">' + b + '</span>').join('') + '</div>';
+    div.addEventListener('click', () => { showDetail(entry.id); });
+    list.appendChild(div);
+  });
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function showDetail(id) {
+  activeId = id;
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  
+  Object.entries(markers).forEach(([eid, m]) => {
+    if(m) m.setIcon(makeIcon(String(eid) === String(id)));
+  });
+  
+  if (map) map.panTo([entry.lat, entry.lng]);
+  document.getElementById('detail-title').textContent = entry.title;
+  const body = document.getElementById('detail-body');
+  body.innerHTML = '';
+
+  const photoSrc = getDrivePhotoUrl(entry.photourl);
+  if (photoSrc) {
+    const img = document.createElement('img');
+    img.className = 'detail-photo'; 
+    img.src = photoSrc; 
+    img.alt = entry.title;
+    img.title = 'Klicken zum Vergrößern';
+    img.addEventListener('click', () => { openLightbox(photoSrc); });
+    img.onerror = () => { img.remove(); };
+    body.appendChild(img);
+  }
+
+  [['audio1url','audio1name'], ['audio2url','audio2name']].forEach(([urlKey, nameKey]) => {
+    const src = getAudioUrl(entry[urlKey]);
+    if (src) {
+      body.appendChild(el('div', 'section-label', entry[nameKey]));
+      const aud = document.createElement('audio');
+      aud.src = src; 
+      aud.controls = true;
+      aud.preload = 'metadata';
+      aud.type = 'audio/mpeg';
+      body.appendChild(aud);
+    }
+  });
+
+  if (entry.notes) {
+    body.appendChild(el('div', 'section-label', 'Notizen'));
+    body.appendChild(el('div', 'notes-text', entry.notes));
+  }
+
+  body.appendChild(el('div', 'coords-text', entry.lat.toFixed(5) + ', ' + entry.lng.toFixed(5)));
+
+  document.getElementById('entry-list-view').style.display = 'none';
+  const detailPanel = document.getElementById('detail-panel');
+  if(detailPanel) detailPanel.classList.add('open');
+  renderList();
+}
+</script>
+</body>
+</html>
