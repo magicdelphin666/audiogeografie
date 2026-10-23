@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
 <title>Audiogeografie Salzburg – Benjamin Lageder</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,12 +26,12 @@
     --mono: 'DM Mono', 'Courier New', monospace;
     --radius: 4px;
   }
-  html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; overflow: hidden; }
+  html, body { height: 100dvh; width: 100vw; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; overflow: hidden; }
 
-  #app { display: flex; height: 100vh; width: 100vw; position: relative; }
+  #app { display: flex; height: 100dvh; width: 100vw; position: relative; }
 
   #map { flex: 1; height: 100%; width: 100%; z-index: 1; background: #e5e3df; }
-  .leaflet-container { background: #e5e3df !important; }
+  .leaflet-container { background: #e5e3df !important; width: 100%; height: 100%; }
   .leaflet-tile { filter: grayscale(100%) contrast(85%) brightness(105%); }
   .leaflet-control-attribution { background: rgba(245,244,241,0.85) !important; color: var(--text-faint) !important; font-size: 9px !important; }
   .leaflet-control-attribution a { color: var(--text-faint) !important; }
@@ -259,7 +260,7 @@
     <div class="modal-scroll-content">
       <div class="modal-subtitle-top">Benjamin Lageder · 2025/26</div>
       <h2>Audiogeografie Salzburg</h2>
-      <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie und eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon. Dazu gehören Märkte, Unterführungen, Räume, Kuhweiden und Bahnsteige. Was ich aufnehme, transformiere ich durch Granularsynthese, spektrale Bearbeitung und Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern flüchtige, atmosphärische und ortgebunden Klangpostkarten.</div>
+      <div class="modal-body-text">Audiogeografie Salzburg ist eine klingende Kartografie und eine Sammlung von Orten, Geräuschen und Erinnerungen. Ich durchstreife die Stadt und ihr Umland mit dem Mikrofon. Dazu gehören Märkte, Unterführungen, Räume, Kuhweiden und Bahnsteige. Was ich aufnehme, transformiere ich durch Granularsynthese, spektrale Bearbeitung und Faltung. Was entsteht, sind keine Musikstücke im herkömmlichen Sinn, sondern flüchtige, atmosphärische und ortgebundene Klangpostkarten.</div>
       <div class="modal-instruction">Auf der interaktiven Karte sind alle Aufnahmeorte als Pins markiert. Ein Klick auf einen Pin öffnet den jeweiligen Eintrag mit dem originalen Field Recording, der bearbeiteten Version, einem Foto und kurzen Notizen.</div>
       
       <div class="modal-funding">
@@ -311,7 +312,7 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 const entries = [
   {
@@ -607,20 +608,26 @@ const entries = [
 let map = null, activeId = null;
 const markers = {};
 
-window.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof L === 'undefined') {
+    document.getElementById('map').textContent = 'Leaflet konnte nicht geladen werden.';
+    renderList();
+    return;
+  }
+
   document.getElementById('welcome-modal-overlay').classList.add('open');
 
   try {
     map = L.map('map', { center: [47.8005, 13.0450], zoom: 13, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Kacheln ohne Subdomains direkt von tile.openstreetmap.org
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abc',
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    setTimeout(() => { if(map) map.invalidateSize(); }, 250);
+    setTimeout(() => { if(map) map.invalidateSize(); }, 300);
   } catch(e) {
     console.error("Map init error:", e);
   }
@@ -648,6 +655,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function closeWelcomeModal() {
   document.getElementById('welcome-modal-overlay').classList.remove('open');
+  if (map) setTimeout(() => map.invalidateSize(), 150);
 }
 
 function openLightbox(src) {
